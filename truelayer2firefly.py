@@ -126,6 +126,23 @@ async def callback(request: Request):
 
     return HTMLResponse(content=Path("templates/index.html").read_text(), status_code=302)
 
+@app.get("/get-tl-accounts")
+async def get_tl_accounts():
+    """Get the accounts from TrueLayer"""
+    truelayer = TrueLayerClient(
+        client_id=config.get("truelayer_client_id"),
+        client_secret=config.get("truelayer_client_secret"),
+        redirect_uri=config.get("truelayer_redirect_uri"),
+    )
+
+    try:
+        accounts = await truelayer.get_accounts()
+        _LOGGER.info(f"Accounts: {accounts}")
+        return accounts
+    except TrueLayer2FireflyConnectionError as e:
+        _LOGGER.exception("Connection error occurred while getting accounts")
+        return {"error": str(e)}, 500
+
 
 if __name__ == "__main__":
     import asyncio

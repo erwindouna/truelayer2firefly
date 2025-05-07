@@ -42,7 +42,7 @@ class TrueLayerClient:
         if auth:
             url = str(URL("https://auth.truelayer.com").join(URL(uri)))
         else:
-            url = str(URL("https://api.truelayer.com/data/v1").join(URL(uri)))
+            url = str(URL("https://api.truelayer.com/data/v1/").join(URL(uri.lstrip("/"))))
 
         headers = {
             "Accept": "application/json",
@@ -74,6 +74,10 @@ class TrueLayerClient:
                     data=params, 
                 )
             else:
+                if self._config.get("truelayer_access_token"):
+                    headers["Authorization"] = f"Bearer {self._config.get('truelayer_access_token')}"
+                    
+                _LOGGER.debug("URL: %s", url)
                 response = await self._client.request(
                     method=method,
                     url=url,
@@ -138,6 +142,20 @@ class TrueLayerClient:
 
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
+
+    async def get_accounts(self) -> dict[str, Any]:
+        """Get the accounts from TrueLayer."""
+        response = await self._request(
+            uri="accounts",
+            method="GET",
+        )
+
+        _LOGGER.info("Received accounts response: %s", response)
+
+        if "accounts" not in response:
+            raise TrueLayer2FireflyError("No accounts found in the response")
+
+        return response["accounts"]
 
     async def close(self) -> None:
         """Close the HTTPX client session."""
