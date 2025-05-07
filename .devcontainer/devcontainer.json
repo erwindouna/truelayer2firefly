@@ -4,7 +4,7 @@
 		"dockerfile": "Dockerfile",
 		"context": ".."
 	},
-	"postCreateCommand": "python3 -m venv .venv && . .venv/bin/activate && poetry install && pre-commit install",
+	"postCreateCommand": "python3 -m venv .venv && . .venv/bin/activate && poetry install",
 	"customizations": {
 		"codespaces": {
 			"openFiles": [
@@ -72,6 +72,7 @@
 			"omzPlugins": "https://github.com/zsh-users/zsh-autosuggestions.git https://github.com/zsh-users/zsh-syntax-highlighting.git https://github.com/zsh-users/zsh-completions.git"
 		},
 		"ghcr.io/devcontainers/features/python:1": {
+			"version": "3.11",
 			"installTools": false
 		}
 	}

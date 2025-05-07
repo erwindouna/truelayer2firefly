@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" x-data="setupForm()" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrueLayer2Firefly Setup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="flex items-center justify-center h-full">
+
+  <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
+    <h1 class="text-2xl font-bold text-gray-800 text-center">TrueLayer2Firefly Setup</h1>
+
+    <form @submit.prevent="submit" class="space-y-4">
+      <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Client ID</label>
+        <input type="text" x-model="clientId" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      </div>
+
+      <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Client Secret</label>
+        <input type="password" x-model="clientSecret" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      </div>
+
+      <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Redirect URI</label>
+        <input type="url" x-model="redirectUri" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      </div>
+
+      <div class="pt-4">
+        <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+          Save and Continue
+        </button>
+      </div>
+    </form>
+
+    <template x-if="submitted">
+      <div class="p-4 mt-4 text-sm text-green-700 bg-green-100 rounded-lg">
+        Configuration saved! Proceed with authentication.
+      </div>
+    </template>
+  </div>
+
+  <script>
+    function setupForm() {
+      return {
+        clientId: '',
+        clientSecret: '',
+        redirectUri: '',
+        submitted: false,
+        submit() {
+          // Here you could persist to localStorage or post to backend
+          console.log('Submitted:', {
+            clientId: this.clientId,
+            clientSecret: this.clientSecret,
+            redirectUri: this.redirectUri
+          });
+
+          this.submitted = true;
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
