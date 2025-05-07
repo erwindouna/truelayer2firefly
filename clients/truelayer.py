@@ -2,9 +2,12 @@
 
 import logging
 import os
+import time
 from typing import Any, Self
+import json
 
 import httpx
+from pytest import param
 from yarl import URL
 from config import Config
 
@@ -30,15 +33,19 @@ class TrueLayerClient:
         self,
         uri: str,
         *,
+        auth: bool = False,
         method: str = "GET",
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
     ) -> Any:
         """Make a request to the TrueLayer API"""
-        url = URL("https://api.truelayer.com").join(uri)
+        if auth:
+            url = str(URL("https://auth.truelayer.com").join(URL(uri)))
+        else:
+            url = str(URL("https://api.truelayer.com/data/v1").join(URL(uri)))
 
         headers = {
-            "Accept": "application/json, text/plain",
+            "Accept": "application/json",
             "User-Agent": "TrueLayer2Firefly",
         }
 
@@ -55,13 +62,25 @@ class TrueLayerClient:
             json = {k: v for k, v in json.items() if v is not None}
 
         try:
-            response = await self._client.request(
-                method=method,
-                url=url,
-                headers=headers,
-                params=params if method == "GET" else None,
-                json=json if method == "POST" else None,
-            )
+            if method == "POST" and auth:
+                _LOGGER.debug("Sending POST request with form-encoded data")
+                headers = {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
+                response = await self._client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    data=params, 
+                )
+            else:
+                response = await self._client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=params if method == "GET" else None,
+                    json=json if method == "POST" and not auth else None,
+                )
             response.raise_for_status()
         except httpx.RequestError as err:
             msg = f"Request error during {method} {url}: {err}"
@@ -80,23 +99,45 @@ class TrueLayerClient:
 
         return response.json()
 
-    async def exchange_authrorization_code(self)-> None:
-        """Exchange the authorization code for an access token."""
-        if not self.client_id or not self.client_secret:
-            raise TrueLayer2FireflyError("Client ID and secret are required")
+    async def get_authorization_url(self) -> str:
+        """Get the authorization URL for TrueLayer."""
 
-        url = f"https://{self.env}.truelayer.com/connect/token"
-        data = {
+        params = {
+            "response_type": "code",
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
+            "nonce": int(time.time()),
+            "scope": "info accounts balance cards transactions direct_debits standing_orders offline_access",
+            "providers": (
+                "uk-ob-all uk-oauth-all nl-xs2a-all de-xs2a-all fr-xs2a-all ie-xs2a-all "
+                "es-xs2a-all it-xs2a-all pt-xs2a-all be-xs2a-all fi-xs2a-all dk-xs2a-all "
+                "no-xs2a-all pl-xs2a-all at-xs2a-all ro-xs2a-all lt-xs2a-all lv-xs2a-all ee-xs2a-all"
+            ),
+            }
+
+        return str(URL("https://auth.truelayer.com").with_query(params))
+
+    async def exchange_authorization_code(self) -> None:
+        """Exchange the authorization code for an access token."""
+        params = {
             "grant_type": "authorization_code",
             "client_id": self.client_id,
             "client_secret": self.client_secret,
-            "code": os.getenv("AUTHORIZATION_CODE"),
-            "redirect_uri": os.getenv("REDIRECT_URI"),
+            "redirect_uri": self.redirect_uri,
+            "code": self._config.get("truelayer_code"),
         }
 
-        response = await self._request(url, method="POST", json=data)
-        self.access_token = response.get("access_token")
-        _LOGGER.info(f"Access token: {self.access_token}")	
+        response = await self._request(
+            uri="/connect/token",
+            auth=True,
+            method="POST",
+            params=params,
+        )
+        
+        _LOGGER.info("Received access token response: %s", response)
+
+        self._config.set("truelayer_access_token", response["access_token"])
+        self._config.set("truelayer_refresh_token", response["refresh_token"])
 
     async def close(self) -> None:
         """Close the HTTPX client session."""

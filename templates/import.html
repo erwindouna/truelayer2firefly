@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" x-data="importView()" x-init="init()" class="h-full bg-gray-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrueLayer2Firefly Import</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="min-h-screen flex flex-col justify-center items-center px-4">
+
+  <div class="w-full max-w-4xl p-10 bg-white rounded-2xl shadow-xl space-y-6">
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-gray-800">🔄 Start Your Import</h1>
+      <p class="text-gray-600 mt-2">Use your TrueLayer access token to begin syncing transactions into Firefly III.</p>
+    </div>
+
+    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+      <p class="text-sm text-gray-500">Client ID:</p>
+      <p class="font-mono text-gray-700 break-all" x-text="clientId"></p>
+
+      <p class="text-sm text-gray-500 mt-4">Access Token:</p>
+      <p class="font-mono text-green-600 break-all" x-text="accessToken ? '•••••••••• (loaded)' : 'Not available'"></p>
+    </div>
+
+    <div class="text-center">
+      <button 
+        @click="startImport"
+        :disabled="importing || !accessToken"
+        class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center"
+        >
+        <template x-if="importing">
+            <span class="flex items-center space-x-2">
+            <svg class="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <span>Importing…</span>
+            </span>
+        </template>
+        <span x-show="!importing">Start Import</span>
+        </button>
+    </div>
+
+    <template x-if="importStatus">
+      <div class="text-center text-green-700 font-medium mt-4" x-text="importStatus"></div>
+    </template>
+  </div>
+
+  <script>
+    function importView() {
+      return {
+        clientId: '',
+        accessToken: '',
+        importing: false,
+        importStatus: '',
+
+        async init() {
+          await this.fetchConfig();
+        },
+
+        async fetchConfig() {
+          try {
+            const response = await fetch('/config');
+            if (!response.ok) throw new Error('Failed to fetch configuration');
+            const config = await response.json();
+            this.clientId = config.truelayer_client_id || '';
+            this.accessToken = config.truelayer_access_token || '';
+          } catch (error) {
+            console.error('Error fetching configuration:', error);
+          }
+        },
+
+        async startImport() {
+          if (!this.accessToken) return;
+          this.importing = true;
+          this.importStatus = '';
+
+          try {
+            const response = await fetch('/start-import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({})
+            });
+
+            if (!response.ok) throw new Error('Import failed');
+
+            const result = await response.json();
+            this.importStatus = result.message || '✅ Import completed!';
+          } catch (error) {
+            console.error(error);
+            this.importStatus = '❌ Failed to import. Check logs.';
+          } finally {
+            this.importing = false;
+          }
+        }
+      };
+    }
+  </script>
+
+</body>
+</html>

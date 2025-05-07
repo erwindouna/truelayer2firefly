@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="setupForm()" class="h-full bg-gray-50">
+<html lang="en" x-data="setupForm()" x-init="init()" class="h-full bg-gray-50">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,38 +9,53 @@
 </head>
 <body class="flex items-center justify-center h-full">
 
-  <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
-    <h1 class="text-2xl font-bold text-gray-800 text-center">TrueLayer2Firefly Setup</h1>
+  <!-- Step 1: Setup form -->
+  <template x-if="step === 1">
+    <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
+      <h1 class="text-2xl font-bold text-gray-800 text-center">TrueLayer2Firefly Setup</h1>
+      <form @submit.prevent="submit" class="space-y-4">
+        <div>
+          <label class="block mb-1 text-sm font-medium text-gray-700">Client ID</label>
+          <input type="text" x-model="clientId" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block mb-1 text-sm font-medium text-gray-700">Client Secret</label>
+          <input type="password" x-model="clientSecret" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block mb-1 text-sm font-medium text-gray-700">Redirect URI</label>
+          <input type="url" x-model="redirectUri" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+        <div class="pt-4">
+          <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+            Authorize
+          </button>
+        </div>
+      </form>
+    </div>
+  </template>
 
-    <form @submit.prevent="submit" class="space-y-4">
-      <div>
-        <label class="block mb-1 text-sm font-medium text-gray-700">Client ID</label>
-        <input type="text" x-model="clientId" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+  <!-- Step 2: Fetching token -->
+  <template x-if="step === 2">
+    <div class="flex items-center justify-center h-full w-full">
+      <div class="text-center">
+        <svg class="w-8 h-8 mx-auto animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <p class="mt-4 text-gray-700">Fetching access token...</p>
       </div>
+    </div>
+  </template>
 
-      <div>
-        <label class="block mb-1 text-sm font-medium text-gray-700">Client Secret</label>
-        <input type="password" x-model="clientSecret" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-      </div>
-
-      <div>
-        <label class="block mb-1 text-sm font-medium text-gray-700">Redirect URI</label>
-        <input type="url" x-model="redirectUri" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-      </div>
-
-      <div class="pt-4">
-        <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-          Save and Continue
-        </button>
-      </div>
-    </form>
-
-    <template x-if="submitted">
-      <div class="p-4 mt-4 text-sm text-green-700 bg-green-100 rounded-lg">
-        Configuration saved! Proceed with authentication.
-      </div>
-    </template>
-  </div>
+  <!-- Step 3: Success with redirect timer -->
+  <template x-if="step === 3">
+    <div class="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl text-center space-y-4">
+      <h2 class="text-2xl font-bold text-green-700">🎉 Setup Complete!</h2>
+      <p class="text-gray-600">Access token successfully stored.</p>
+      <p class="text-sm text-gray-400">Redirecting to import in <span x-text="countdown"></span> seconds...</p>
+    </div>
+  </template>
 
   <script>
     function setupForm() {
@@ -48,18 +63,96 @@
         clientId: '',
         clientSecret: '',
         redirectUri: '',
-        submitted: false,
-        submit() {
-          // Here you could persist to localStorage or post to backend
-          console.log('Submitted:', {
-            clientId: this.clientId,
-            clientSecret: this.clientSecret,
-            redirectUri: this.redirectUri
-          });
+        accessToken: '',
+        step: 1,
+        countdown: 5,
+        timer: null,
 
-          this.submitted = true;
+        async init() {
+          const code = this.getCodeParam();
+          await this.fetchConfig();
+
+          if (this.accessToken) {
+            this.step = 3;
+            this.startCountdown();
+            return;
+          }
+
+          if (code) {
+            this.step = 2;
+            await this.fetchAccessToken(code);
+            await this.fetchConfig();
+            if (this.accessToken) {
+              this.step = 3;
+              this.startCountdown();
+            } else {
+              this.step = 1;
+            }
+          }
+        },
+
+        async fetchConfig() {
+          try {
+            const response = await fetch('/config');
+            if (!response.ok) throw new Error('Failed to fetch configuration');
+            const config = await response.json();
+            this.clientId = config.truelayer_client_id || '';
+            this.clientSecret = config.truelayer_client_secret || '';
+            this.redirectUri = config.truelayer_redirect_uri || '';
+            this.accessToken = config.truelayer_access_token || '';
+          } catch (error) {
+            console.error('Error fetching configuration:', error);
+          }
+        },
+
+        getCodeParam() {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get('code');
+        },
+
+        async fetchAccessToken(code) {
+          try {
+            const response = await fetch('/get-access-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code })
+            });
+            if (!response.ok) throw new Error('Failed to fetch access token');
+            const data = await response.json();
+            console.log('Access token fetched:', data);
+          } catch (error) {
+            console.error('Error fetching access token:', error);
+          }
+        },
+
+        startCountdown() {
+          this.timer = setInterval(() => {
+            this.countdown--;
+            if (this.countdown <= 0) {
+              clearInterval(this.timer);
+              window.location.href = '/import';
+            }
+          }, 1000);
+        },
+
+        async authorize() {
+          try {
+            const response = await fetch('/get-authorization-url', {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            if (!response.ok) throw new Error('Failed to get authorization URL');
+            const { url } = await response.json();
+            window.location.href = url;
+          } catch (error) {
+            console.error('Error during authorization:', error);
+          }
+        },
+
+        submit() {
+          this.authorize();
         }
-      }
+      };
     }
   </script>
 
