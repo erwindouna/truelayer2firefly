@@ -1,14 +1,17 @@
 """Class to handle TrueLayer API calls."""
 
+from datetime import datetime
 import logging
 import os
 import time
 from typing import Any, Self
+import humanize
 import json
 
 import httpx
 from pytest import param
 from yarl import URL
+import jwt
 from config import Config
 
 from exceptions import TrueLayer2FireflyConnectionError, TrueLayer2FireflyError, TrueLayer2FireflyTimeoutError
@@ -25,10 +28,33 @@ class TrueLayerClient:
         self.redirect_uri: str = redirect_uri
         self.access_token: str | None = None
 
+        self._import_accounts: list[dict[str, str]] = []
+        self._import_transactions: list[dict[str, str]] = []
+
         self._config = Config()
         self._request_timeout = request_timeout
         self._client: httpx.AsyncClient | None = None
 
+    @property
+    def lifetime(self) -> str | None:
+        """Get the lifetime of the access token"""
+        if not self._config.get("expiration_date"): # TODO: Fix this
+            _LOGGER.warning("Expiration date not set in the config")
+            return None
+        return humanize.naturaldelta(
+            datetime.fromtimestamp(self._config.get("expiration_date")) - datetime.now()
+        )
+
+    @property
+    def import_accounts(self) -> list[dict[str, str]]:
+        """Get the import accounts"""
+        return self._import_accounts
+    
+    @property
+    def import_transactions(self) -> list[dict[str, str]]:
+        """Get the import transactions"""
+        return self._import_transactions    
+    
     async def _request(
         self,
         uri: str,
@@ -142,6 +168,14 @@ class TrueLayerClient:
 
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
+
+        await self.__extract_info_from_token
+
+    async def __extract_info_from_token(self) -> None:
+        """Extract information from the access token."""
+        decoded = jwt.decode(self._config.get("truelayer_access_token"), verify=False)
+        self._config.set("credentials_id", decoded["sub"])
+        self._config.set("expiration_date", decoded["exp"])
 
     async def get_accounts(self) -> dict[str, Any]:
         """Get the accounts from TrueLayer."""

@@ -7,57 +7,144 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-screen flex flex-col justify-center items-center px-4">
+<body class="min-h-screen flex justify-center items-start px-4 py-10">
 
-  <div class="w-full max-w-4xl p-10 bg-white rounded-2xl shadow-xl space-y-6">
-    <div class="text-center">
-      <h1 class="text-3xl font-bold text-gray-800">🔄 Start Your Import</h1>
-      <p class="text-gray-600 mt-2">Use your TrueLayer access token to begin syncing transactions into Firefly III.</p>
-    </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
+    <!-- Import Panel -->
+    <div class="col-span-2 bg-white rounded-2xl shadow-xl p-8 space-y-6">
+      <div class="text-center">
+        <h1 class="text-3xl font-bold text-gray-800">🔄 Start Your Import</h1>
+        <p class="text-gray-600 mt-2">Use your TrueLayer access token to begin syncing transactions into Firefly III.</p>
+      </div>
 
-    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
-      <p class="text-sm text-gray-500">Client ID:</p>
-      <p class="font-mono text-gray-700 break-all" x-text="clientId"></p>
+      <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+        <p class="text-sm text-gray-500">Client ID:</p>
+        <p class="font-mono text-gray-700 break-all" x-text="clientId"></p>
 
-      <p class="text-sm text-gray-500 mt-4">Access Token:</p>
-      <p class="font-mono text-green-600 break-all" x-text="accessToken ? '•••••••••• (loaded)' : 'Not available'"></p>
-    </div>
+        <p class="text-sm text-gray-500 mt-4">Access Token:</p>
+        <p class="font-mono text-green-600 break-all" x-text="accessToken ? '•••••••••• (loaded)' : 'Not available'"></p>
+      </div>
 
-    <div class="text-center">
-      <button 
-        @click="startImport"
-        :disabled="importing || !accessToken"
-        class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center"
+      <div class="text-center flex items-center justify-center space-x-4">
+        <button 
+          @click="loadAccounts"
+          :disabled="importing || !accessToken"
+          class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center"
         >
-        <template x-if="importing">
-            <span class="flex items-center space-x-2">
-            <svg class="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-            <span>Importing…</span>
-            </span>
-        </template>
-        <span x-show="!importing">Start Import</span>
+          <span x-show="!importing">Start Import</span>
         </button>
+
+        <div x-show="loadingStart" x-transition.opacity x-transition.duration.300ms class="flex items-center space-x-2">
+          <svg class="w-5 h-5 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <span class=\"text-sm text-gray-700\">Fetching transactions…</span>
+        </div>
+      </div>
+
+      <!-- Account List -->
+      <div x-show="loadingAccounts" class="flex items-center justify-center py-6">
+        <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span class="ml-2 text-sm text-blue-600">Fetching accounts...</span>
+      </div>
+      <div x-show="accounts.length" class="mt-6">
+        <h3 class="text-lg font-semibold mb-2">Accounts to Import</h3>
+        <ul class="divide-y divide-gray-200">
+          <template x-for="account in accounts" :key="account.account_id">
+            <li class="py-2">
+              <div class="text-gray-800 font-medium" x-text="account.display_name"></div>
+              <div class="text-sm text-gray-600" x-text="account.account_number?.iban"></div>
+              <div class="text-sm text-gray-500" x-text="account.account_type + ' · ' + account.currency + ' · ' + account.provider.provider_id"></div>
+            </li>
+          </template>
+        </ul>
+
+        <!-- Spinner while importing -->
+        <div x-show="importing" class="flex items-center justify-center mt-6">
+          <svg class="w-6 h-6 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span class="ml-2 text-sm text-blue-600">Importing transactions...</span>
+        </div>
+      </div>
+
+      <template x-if="importStatus">
+        <div class="text-center text-green-700 font-medium mt-4" x-text="importStatus"></div>
+      </template>
+
+      <!-- Transaction List -->
+      <div x-show="transactions && transactions.length" class="mt-6">
+        <h3 class="text-lg font-semibold mb-2">Retrieved Transactions</h3>
+        <ul class="divide-y divide-gray-200 text-sm">
+          <template x-for="tx in transactions" :key="tx.transaction_id">
+            <li class="py-3">
+              <div class="font-medium text-gray-800" x-text="tx.description"></div>
+              <div class="text-gray-600">
+                <span x-text="tx.timestamp"></span>
+                · <span x-text="tx.amount + ' ' + tx.currency"></span>
+                · <span x-text="tx.transaction_type"></span>
+              </div>
+              <div class="text-gray-500 italic" x-text="tx.merchant_name"></div>
+              <div class="text-gray-600 mt-1">
+                <span class="font-semibold">Category:</span> <span x-text="tx.transaction_category"></span>
+              </div>
+              <div class="text-gray-500 text-xs mt-0.5" x-text="tx.transaction_classification?.join(', ')"></div>
+            </li>
+          </template>
+        </ul>
+      </div>
+
     </div>
 
-    <template x-if="importStatus">
-      <div class="text-center text-green-700 font-medium mt-4" x-text="importStatus"></div>
-    </template>
+    <!-- Config Check Panel -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-800">Configuration Check</h2>
+        <span 
+          x-show="configStatus.every(item => item.status === 'OK')"
+          class="text-green-600 font-bold"
+        >✅</span>
+        <span 
+          x-show="configStatus.some(item => item.status !== 'OK')"
+          class="text-yellow-600 font-bold"
+        >⚠️</span>
+      </div>
+      <ul class="text-sm text-gray-700 space-y-2">
+        <template x-for="item in configStatus" :key="item.key">
+          <li class="flex justify-between items-center">
+            <span x-text="item.key"></span>
+            <span 
+              class="font-mono" 
+              :class="item.status === 'OK' ? 'text-green-600' : 'text-red-600'" 
+              x-text="item.status"
+            ></span>
+          </li>
+        </template>
+      </ul>
+    </div>
   </div>
 
   <script>
     function importView() {
       return {
+        loadingAccounts: false,
+        loadingStart: false,
         clientId: '',
         accessToken: '',
         importing: false,
         importStatus: '',
+        configStatus: [],
+        accounts: [],
+        transactions: [],
 
         async init() {
           await this.fetchConfig();
-          await this.getTLAccounts();
+          await this.fetchConfigStatus();
         },
 
         async fetchConfig() {
@@ -72,27 +159,63 @@
           }
         },
 
-        async getTLAccounts() {
-          if (!this.accessToken) return;
+        async fetchConfigStatus() {
           try {
-            const response = await fetch('/get-tl-accounts', {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' },
-            });
+            const response = await fetch('/check-configuration');
+            if (!response.ok) throw new Error('Failed to check configuration');
+            this.configStatus = await response.json();
+          } catch (error) {
+            console.error('Error checking configuration:', error);
+          }
+        },
 
+        async loadAccounts() {
+          if (!this.accessToken) return;
+          this.loadingAccounts = true;
+          await new Promise(r => setTimeout(r, 1000)); // Simulate delay
+
+          try {
+            const response = await fetch('/get-tl-accounts');
             if (!response.ok) throw new Error('Failed to fetch accounts');
-
-            const result = await response.json();
-            this.accessToken = result.access_token || '';
+            this.accounts = await response.json();
+            if (!this.accounts.length) {
+              this.importStatus = '❌ No accounts found.';
+              return;
+            }
+            this.importStatus = `✅ Found ${this.accounts.length} account(s). Starting import in 3 seconds...`;
+            setTimeout(() => this.startImport(), 3000);
           } catch (error) {
             console.error('Error fetching accounts:', error);
+            this.importStatus = '❌ Failed to fetch accounts';
+          } finally {
+            this.loadingAccounts = false;
           }
         },
 
         async startImport() {
-          if (!this.accessToken) return;
-          this.importing = true;
+          this.loadingStart = true;
           this.importStatus = '';
+          setTimeout(async () => {
+            try {
+              const response = await fetch('/get-tl-transactions');
+              if (!response.ok) throw new Error('Failed to fetch transactions');
+              const transactions = await response.json();
+              this.accounts = [];
+              this.transactions = transactions;
+              this.importStatus = `✅ Retrieved ${transactions.length} transactions.`;
+              // Optionally display transactions here
+              // Store in a property if needed
+            } catch (error) {
+              console.error(error);
+              this.importStatus = '❌ Failed to fetch transactions';
+            } finally {
+              this.loadingStart = false;
+            }
+          }, 1000);
+        },
+          async startFireflyImport() {
+          this.importStatus = '';
+          this.importing = true;
 
           try {
             const response = await fetch('/start-import', {
@@ -102,7 +225,6 @@
             });
 
             if (!response.ok) throw new Error('Import failed');
-
             const result = await response.json();
             this.importStatus = result.message || '✅ Import completed!';
           } catch (error) {
@@ -111,6 +233,7 @@
           } finally {
             this.importing = false;
           }
+        }
         }
       };
     }
