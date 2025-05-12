@@ -18,42 +18,18 @@ from exceptions import TrueLayer2FireflyConnectionError, TrueLayer2FireflyError,
 
 _LOGGER = logging.getLogger(__name__)
 
-class TrueLayerClient:
-    """TrueLayer client for making API calls"""
+class FireflyClient:
+    """Firefly client for making API calls"""
 
-    def __init__(self, request_timeout: float = 10.0, client_id: str | None = None, client_secret: str | None = None, redirect_uri: str | None = None):
-        """Initialize the TrueLayer client"""
-        self.client_id: str | None = client_id
-        self.client_secret: str | None = client_secret
-        self.redirect_uri: str | None = redirect_uri
-        self.access_token: str | None = None
+    def __init__(self, request_timeout: float = 10.0, access_token: str|None=None, url: str|None=None):
+        """Initialize the Firefly client"""
+        self.url: str | None = url
+        self.request_timeout: float = request_timeout
+        self.access_token: str | None = access_token
 
-        if not self.client_id or not self.client_secret or not self.redirect_uri:
-            _LOGGER.info("TrueLayer client ID, secret, or redirect URI not set. They probably need to be set first.")
-
-        self._config = Config()
-        self._request_timeout = request_timeout
-        self._client: httpx.AsyncClient | None = None
-
-    @property
-    def lifetime(self) -> str | None:
-        """Get the lifetime of the access token"""
-        if not self._config.get("expiration_date"): # TODO: Fix this
-            _LOGGER.warning("Expiration date not set in the config")
-            return None
-        return humanize.naturaldelta(
-            datetime.fromtimestamp(self._config.get("expiration_date")) - datetime.now()
-        )
-
-    @property
-    def import_accounts(self) -> list[dict[str, str]]:
-        """Get the import accounts"""
-        return self._import_accounts
-    
-    @property
-    def import_transactions(self) -> list[dict[str, str]]:
-        """Get the import transactions"""
-        return self._import_transactions    
+        self._config: Config = Config()
+        self._request_timeout: float = request_timeout
+        self._client: httpx.AsyncClient | None = None   
     
     async def _request(
         self,
@@ -64,11 +40,8 @@ class TrueLayerClient:
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
     ) -> Any:
-        """Make a request to the TrueLayer API"""
-        if auth:
-            url = str(URL("https://auth.truelayer.com").join(URL(uri)))
-        else:
-            url = str(URL("https://api.truelayer.com/data/v1/").join(URL(uri.lstrip("/"))))
+        """Make a request to the Firefly API"""
+        url = str(URL(self.url).join(URL(uri)))
 
         headers = {
             "Accept": "application/json",
@@ -81,7 +54,6 @@ class TrueLayerClient:
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=self._request_timeout)
 
-        # Sanitize params and json by removing None values
         if params:
             params = {k: v for k, v in params.items() if v is not None}
         if json:
@@ -100,9 +72,9 @@ class TrueLayerClient:
                     data=params, 
                 )
             else:
-                if self._config.get("truelayer_access_token"):
-                    headers["Authorization"] = f"Bearer {self._config.get('truelayer_access_token')}"
-                    
+                if self._config.get("firefly_access_token"):
+                    headers["Authorization"] = f"Bearer {self._config.get('firefly_access_token')}"
+
                 _LOGGER.debug("URL: %s", url)
                 response = await self._client.request(
                     method=method,
@@ -129,24 +101,6 @@ class TrueLayerClient:
 
         return response.json()
 
-    async def get_authorization_url(self) -> str:
-        """Get the authorization URL for TrueLayer."""
-
-        params = {
-            "response_type": "code",
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
-            "nonce": int(time.time()),
-            "scope": "info accounts balance cards transactions direct_debits standing_orders offline_access",
-            "providers": (
-                "uk-ob-all uk-oauth-all nl-xs2a-all de-xs2a-all fr-xs2a-all ie-xs2a-all "
-                "es-xs2a-all it-xs2a-all pt-xs2a-all be-xs2a-all fi-xs2a-all dk-xs2a-all "
-                "no-xs2a-all pl-xs2a-all at-xs2a-all ro-xs2a-all lt-xs2a-all lv-xs2a-all ee-xs2a-all"
-            ),
-            }
-
-        return str(URL("https://auth.truelayer.com").with_query(params))
-
     async def exchange_authorization_code(self) -> None:
         """Exchange the authorization code for an access token."""
         params = {
@@ -158,8 +112,7 @@ class TrueLayerClient:
         }
 
         response = await self._request(
-            uri="/connect/token",
-            auth=True,
+            uri="/oauth/token",
             method="POST",
             params=params,
         )

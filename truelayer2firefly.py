@@ -1,25 +1,34 @@
-from fastapi import FastAPI, Request, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
+from ast import Str
+import base64
+from hashlib import sha256
+import secrets
+from fastapi import FastAPI, Form, Request, Depends, params
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import HTTPException
+from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from yarl import URL
 import logging
 from contextlib import asynccontextmanager
+from starlette.middleware.sessions import SessionMiddleware
 
+from clients.firefly import FireflyClient
 from clients.truelayer import TrueLayerClient
 from config import Config
 from exceptions import TrueLayer2FireflyAuthorizationError, TrueLayer2FireflyConnectionError, TrueLayer2FireflyError, TrueLayer2FireflyTimeoutError
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 _LOGGER = logging.getLogger(__name__)
 
-logging.getLogger("uvicorn").setLevel(logging.INFO)
+logging.getLogger("uvicorn").setLevel(logging.DEBUG)
 
 config = Config("config.json")
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,14 +39,17 @@ async def lifespan(app: FastAPI):
         client_secret=config.get("truelayer_client_secret"),
         redirect_uri=config.get("truelayer_redirect_uri"),
     )
-    _LOGGER.info("TrueLayer client initialized.")
+    _LOGGER.info("TrueLayer client initialized")
     yield
     client = app.state.truelayer_client
     if client:
         await client.close()
-        _LOGGER.info("TrueLayer client closed.")
+        _LOGGER.info("TrueLayer client closed")
 
 app = FastAPI(lifespan=lifespan)
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(255))
 
 async def get_truelayer_client() -> TrueLayerClient:
     client = app.state.truelayer_client
@@ -46,12 +58,95 @@ async def get_truelayer_client() -> TrueLayerClient:
     return client
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
-    return Path("templates/index.html").read_text()
+async def index(request: Request):
+    """Render the index page."""
+    return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/import", response_class=HTMLResponse)
-async def import_to():
-    return Path("templates/import.html").read_text()
+@app.get("/configuration", response_class=HTMLResponse)
+async def configuration(request: Request):
+    """Render the configuration page."""
+    return templates.TemplateResponse("configuration.html", {"request": request})
+
+@app.post("/firefly/configuration")
+async def firefly_configuration(request: Request, firefly_url: str = Form(...), firefly_client_id: str = Form(...)):
+    """Handle the configuration form submission."""
+    _LOGGER.info("Starting configuration...")
+    config.set("firefly_api_url", firefly_url)
+    config.set("firefly_client_id", firefly_client_id)
+
+    state = secrets.token_urlsafe(30)
+    code_verifier = secrets.token_urlsafe(64)
+    code_challenge = base64.urlsafe_b64encode(
+        sha256(code_verifier.encode()).digest()
+    ).rstrip(b"=").decode()
+
+    session = request.session
+    session["state"] = state
+    session["code_verifier"] = code_verifier
+    session["form_client_id"] = firefly_client_id
+    session["form_base_url"] = firefly_url
+
+    redirect_uri = str(request.url_for("firefly/callback"))
+    query_params = {
+        "client_id": firefly_client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "",
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    }
+
+    auth_url = URL(session["form_base_url"]).with_path("/oauth/authorize").with_query(query_params)
+
+    _LOGGER.info("Query parameters are %s", query_params)
+    _LOGGER.info(f"Now redirecting to {auth_url.with_query(None)} (params omitted)")
+
+    return RedirectResponse(str(auth_url), status_code=302)
+
+@app.get("/firefly/callback", name="firefly/callback")
+async def firefly_callback(request: Request):
+    """Handle the callback from Firefly."""
+    code = request.query_params.get("code")
+    state = request.query_params.get("state")
+
+    session = request.session
+    stored_state = session.get("state")
+    stored_code_verifier = session.get("code_verifier")
+    form_client_id = session.get("form_client_id")
+    form_base_url = session.get("form_base_url")
+
+    if state != stored_state:
+        _LOGGER.error("State mismatch: %s != %s", state, stored_state)
+        raise HTTPException(status_code=400, detail="State mismatch")
+    
+    params = {
+        "grant_type": "authorization_code",
+        "client_id": form_client_id,
+        "redirect_uri": str(request.url_for("firefly/callback")),
+        "code": code,
+        "code_verifier": stored_code_verifier,
+    }
+
+    response = await FireflyClient(
+        url=form_base_url
+    )._request(
+        uri="/oauth/token",
+        method="POST",
+        params=params,
+    )
+
+   
+
+    token_data = response.json()
+    config.set("firefly_access_token", token_data["access_token"])
+
+    config.set("firefly_code", code)
+    config.set("firefly_client_id", form_client_id)
+    config.set("firefly_api_url", form_base_url)
+
+    _LOGGER.info(f"Received code: {code} and state: {state}")
+    return HTMLResponse(content=Path("templates/index.html").read_text(), status_code=302)
 
 @app.get("/config")
 async def get_config():

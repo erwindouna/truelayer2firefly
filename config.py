@@ -3,6 +3,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 class Config:
     """Configuration class for Plaid2Firefly"""
@@ -26,6 +29,7 @@ class Config:
     def set(self, key: str, value: Any):
         """Set a configuration value"""
         self._config[key] = value
+        _LOGGER.info(f"Saving configuration: {key} to {value}")
         self._save()
 
     def update(self, new_values: dict):
