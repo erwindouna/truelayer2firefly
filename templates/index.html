@@ -10,23 +10,30 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Firefly III</span>
                 <span class="badge"
-                      :class="status === 'ok' ? 'bg-success' : 'bg-danger'"
-                      x-text="status === 'ok' ? 'Connected' : 'Disconnected'">
+                      :class="status === 'ok' ? 'bg-success' : (status === 'fail' ? 'bg-danger' : 'bg-warning')"
+                      x-text="status === 'ok' ? 'Connected' : (status === 'fail' ? 'Disconnected' : 'Checking...')">
                 </span>
             </div>
             <div class="card-body">
+                <template x-if="status === null">
+                    <p class="text-muted">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        Checking status...
+                    </p>
+                </template>
                 <template x-if="status === 'ok'">
                     <p class="text-success">Firefly III is properly configured and reachable.</p>
                 </template>
-                <template x-if="status !== 'ok'">
-                    <p class="text-danger">Connection failed. Please check configuration.</p>
-                    <a href="/configuration" class="btn btn-secondary">Fix Configuration</a>
+                <template x-if="status === 'fail'">
+                    <p class="text-danger">
+                        Connection failed. Please check configuration.
+                        <a href="/configuration" class="btn btn-primary ms-2">Fix Configuration</a>
+                    </p>
                 </template>
             </div>
         </div>
     </div>
 
-    <!-- TrueLayer Status Placeholder -->
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">TrueLayer</div>
@@ -45,9 +52,11 @@
                 try {
                     const res = await fetch('/firefly/healthcheck');
                     const data = await res.json();
-                    this.status = (res.ok && data.result === 'OK') ? 'ok' : 'fail';
+                    this.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
+                    console.log('Firefly III status:', this.status);
                 } catch (err) {
                     this.status = 'fail';
+                    console.error('Error checking Firefly III status:', err);
                 }
             }
         }));

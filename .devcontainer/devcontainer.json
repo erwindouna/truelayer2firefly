@@ -21,40 +21,45 @@
 				"esbenp.prettier-vscode",
 				"mhutchie.git-graph",
 				"ms-python.python",
+				"ms-python.black-formatter",
+				"ms-python.vscode-pylance",
 				"oderwat.indent-rainbow",
 				"redhat.vscode-yaml",
 				"ryanluker.vscode-coverage-gutters"
 			],
 			"settings": {
 				"[python]": {
-					"editor.defaultFormatter": "ms-python.python",
+					"editor.defaultFormatter": "ms-python.black-formatter",
+					"editor.formatOnSave": true,
 					"editor.codeActionsOnSave": {
 						"source.fixAll": true,
 						"source.organizeImports": true
 					}
 				},
-				"coverage-gutters.customizable.context-menu": true,
-				"coverage-gutters.customizable.status-bar-toggler-watchCoverageAndVisibleEditors-enabled": true,
-				"coverage-gutters.showGutterCoverage": false,
-				"coverage-gutters.showLineCoverage": true,
-				"coverage-gutters.xmlname": "coverage.xml",
-				"python.analysis.extraPaths": [
-					"${workspaceFolder}/src"
-				],
-				"python.defaultInterpreterPath": ".venv/bin/python",
-				"python.formatting.provider": "ruff",
+				"editor.formatOnPaste": true,
+				"editor.formatOnSaveMode": "file",
+				"editor.formatOnType": true,
+				"python.formatting.provider": "black",
 				"python.linting.enabled": true,
+				"python.linting.pylintEnabled": false,
 				"python.linting.mypyEnabled": true,
-				"python.linting.pylintEnabled": true,
-				"python.testing.cwd": "${workspaceFolder}",
-				"python.testing.pytestArgs": [
-					"--cov-report=xml"
-				],
-				"python.testing.pytestEnabled": true,
+				"ruff.enable": true,
 				"ruff.importStrategy": "fromEnvironment",
 				"ruff.interpreter": [
 					".venv/bin/python"
 				],
+				"python.defaultInterpreterPath": ".venv/bin/python",
+				"python.analysis.extraPaths": [
+					"${workspaceFolder}/src"
+				],
+				"python.testing.pytestEnabled": true,
+				"python.testing.pytestArgs": [
+					"--cov-report=xml"
+				],
+				"python.testing.cwd": "${workspaceFolder}",
+				"coverage-gutters.showLineCoverage": true,
+				"coverage-gutters.showGutterCoverage": false,
+				"coverage-gutters.xmlname": "coverage.xml",
 				"terminal.integrated.defaultProfile.linux": "zsh"
 			}
 		}

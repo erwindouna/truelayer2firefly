@@ -3,6 +3,7 @@
 from datetime import datetime
 import logging
 import os
+import re
 import time
 from typing import Any, Self
 import humanize
@@ -43,6 +44,8 @@ class FireflyClient:
         """Make a request to the Firefly API"""
         self.access_token = self._config.get("firefly_access_token")
         self.url = self._config.get("firefly_api_url")
+
+        # No refresh mechanism is needed, since the token is valid for 55 years
 
         if auth:
             url = str(URL(self.url).join(URL(uri)))
@@ -104,19 +107,14 @@ class FireflyClient:
                 {"Content-Type": content_type, "response": response.text},
             )
 
-        return response.json()
-
+        return response
+  
     async def healthcheck(self) -> None:
         """Check the health of the Firefly API."""
-        try:
-            response = await self._request(
-                uri="about",
-                method="GET",
-            )
-            _LOGGER.info("Firefly API health check response: %s", response)
-        except TrueLayer2FireflyConnectionError as err:
-            _LOGGER.error("Firefly API health check failed: %s", str(err))
-            raise
+        return await self._request(
+            uri="about",
+            method="GET",
+        )
 
     async def close(self) -> None:
         """Close the HTTPX client session."""
