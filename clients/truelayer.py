@@ -65,6 +65,11 @@ class TrueLayerClient:
         json: dict[str, Any] | None = None,
     ) -> Any:
         """Make a request to the TrueLayer API"""
+        self.access_token = self._config.get("truelayer_access_token")
+        self.client_id = self._config.get("truelayer_client_id")
+        self.client_secret = self._config.get("truelayer_client_secret")
+        self.redirect_uri = self._config.get("truelayer_redirect_uri")
+
         if auth:
             url = str(URL("https://auth.truelayer.com").join(URL(uri)))
         else:

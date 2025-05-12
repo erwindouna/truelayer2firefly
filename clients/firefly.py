@@ -41,8 +41,14 @@ class FireflyClient:
         json: dict[str, Any] | None = None,
     ) -> Any:
         """Make a request to the Firefly API"""
-        url = str(URL(self.url).join(URL(uri)))
+        self.access_token = self._config.get("firefly_access_token")
+        self.url = self._config.get("firefly_api_url")
 
+        if auth:
+            url = str(URL(self.url).join(URL(uri)))
+        else:
+            url = str(URL(self.url).join(URL(f"api/v1/{uri}")))
+            
         headers = {
             "Accept": "application/json",
             "User-Agent": "TrueLayer2Firefly",
@@ -60,8 +66,7 @@ class FireflyClient:
             json = {k: v for k, v in json.items() if v is not None}
 
         try:
-            if method == "POST" and auth:
-                _LOGGER.debug("Sending POST request with form-encoded data")
+            if method == "POST":
                 headers = {
                     "Content-Type": "application/x-www-form-urlencoded"
                 }
@@ -101,48 +106,17 @@ class FireflyClient:
 
         return response.json()
 
-    async def exchange_authorization_code(self) -> None:
-        """Exchange the authorization code for an access token."""
-        params = {
-            "grant_type": "authorization_code",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-            "redirect_uri": self.redirect_uri,
-            "code": self._config.get("truelayer_code"),
-        }
-
-        response = await self._request(
-            uri="/oauth/token",
-            method="POST",
-            params=params,
-        )
-        
-        _LOGGER.info("Received access token response: %s", response)
-
-        self._config.set("truelayer_access_token", response["access_token"])
-        self._config.set("truelayer_refresh_token", response["refresh_token"])
-
-        await self.__extract_info_from_token
-
-    async def __extract_info_from_token(self) -> None:
-        """Extract information from the access token."""
-        decoded = jwt.decode(self._config.get("truelayer_access_token"), verify=False)
-        self._config.set("credentials_id", decoded["sub"])
-        self._config.set("expiration_date", decoded["exp"])
-
-    async def get_accounts(self) -> dict[str, Any]:
-        """Get the accounts from TrueLayer."""
-        response = await self._request(
-            uri="accounts",
-            method="GET",
-        )
-
-        _LOGGER.info("Received accounts response: %s", response)
-
-        if "accounts" not in response:
-            raise TrueLayer2FireflyError("No accounts found in the response")
-
-        return response["accounts"]
+    async def healthcheck(self) -> None:
+        """Check the health of the Firefly API."""
+        try:
+            response = await self._request(
+                uri="about",
+                method="GET",
+            )
+            _LOGGER.info("Firefly API health check response: %s", response)
+        except TrueLayer2FireflyConnectionError as err:
+            _LOGGER.error("Firefly API health check failed: %s", str(err))
+            raise
 
     async def close(self) -> None:
         """Close the HTTPX client session."""

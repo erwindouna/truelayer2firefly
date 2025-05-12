@@ -2,6 +2,7 @@ from ast import Str
 import base64
 from hashlib import sha256
 import secrets
+import string
 from fastapi import FastAPI, Form, Request, Depends, params
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,12 +20,12 @@ from config import Config
 from exceptions import TrueLayer2FireflyAuthorizationError, TrueLayer2FireflyConnectionError, TrueLayer2FireflyError, TrueLayer2FireflyTimeoutError
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 _LOGGER = logging.getLogger(__name__)
 
-logging.getLogger("uvicorn").setLevel(logging.DEBUG)
+logging.getLogger("uvicorn").setLevel(logging.INFO)
 
 config = Config("config.json")
 
@@ -32,19 +33,32 @@ config = Config("config.json")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan event handler to initialize and close the TrueLayer client."""
-    _LOGGER.info("Initializing TrueLayer client...")
+    """Lifespan event handler to initialize and close API clients."""
     app.state.truelayer_client = TrueLayerClient(
         client_id=config.get("truelayer_client_id"),
         client_secret=config.get("truelayer_client_secret"),
         redirect_uri=config.get("truelayer_redirect_uri"),
     )
     _LOGGER.info("TrueLayer client initialized")
+
+    app.state.firefly_client = FireflyClient(
+        url=config.get("firefly_api_url"),
+        access_token=config.get("firefly_access_token"),
+    )
+    _LOGGER.info("Firefly client initialized")
+
     yield
-    client = app.state.truelayer_client
-    if client:
+
+    if (client := app.state.truelayer_client):
         await client.close()
         _LOGGER.info("TrueLayer client closed")
+
+    if (client := app.state.firefly_client):
+        await client.close()
+        _LOGGER.info("Firefly client closed")
+
+    _LOGGER.info("Application shutdown complete")
+
 
 app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory="templates")
@@ -74,8 +88,8 @@ async def firefly_configuration(request: Request, firefly_url: str = Form(...), 
     config.set("firefly_api_url", firefly_url)
     config.set("firefly_client_id", firefly_client_id)
 
-    state = secrets.token_urlsafe(30)
-    code_verifier = secrets.token_urlsafe(64)
+    state = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(40))
+    code_verifier = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(128))
     code_challenge = base64.urlsafe_b64encode(
         sha256(code_verifier.encode()).digest()
     ).rstrip(b"=").decode()
@@ -136,17 +150,26 @@ async def firefly_callback(request: Request):
         params=params,
     )
 
-   
+    _LOGGER.info("Received access token response: %s", response)
+    config.set("firefly_access_token", response["access_token"])
+    config.set("firefly_refresh_token", response["refresh_token"])
+    config.set("firefly_expires_in", response["expires_in"])
 
-    token_data = response.json()
-    config.set("firefly_access_token", token_data["access_token"])
+    return RedirectResponse(
+        str(request.url_for("index")),
+        status_code=302,
+    )
 
-    config.set("firefly_code", code)
-    config.set("firefly_client_id", form_client_id)
-    config.set("firefly_api_url", form_base_url)
-
-    _LOGGER.info(f"Received code: {code} and state: {state}")
-    return HTMLResponse(content=Path("templates/index.html").read_text(), status_code=302)
+@app.get("/firefly/healthcheck")
+async def firefly_healthcheck(firefly: FireflyClient = Depends(FireflyClient)):
+    """Check the health of the Firefly API."""
+    try:
+        await firefly.healthcheck()
+        _LOGGER.info("Firefly API is healthy.")
+        return {"status": "OK"}
+    except Exception as e:
+        _LOGGER.error("Firefly API health check failed: %s", str(e))
+        raise HTTPException(status_code=500, detail="Firefly API is not healthy")
 
 @app.get("/config")
 async def get_config():

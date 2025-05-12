@@ -1,48 +1,56 @@
 {% extends "layout.html" %}
 
-{% block title %}Configure Integrations{% endblock %}
+{% block title %}Integration Status{% endblock %}
 
 {% block content %}
 <div class="row">
-    <!-- Firefly III Config -->
+    <!-- Firefly III Status -->
     <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header">Firefly III Configuration</div>
-            <div class="card-body" x-data="{ token: '', url: '' }">
-                <form>
-                    <div class="mb-3">
-                        <label class="form-label">API URL</label>
-                        <input type="url" class="form-control" x-model="url" placeholder="https://your-firefly-url/api">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Access Token</label>
-                        <input type="text" class="form-control" x-model="token">
-                    </div>
-                    <button type="button" class="btn btn-primary" @click="console.log('Firefly config:', { url, token })">Save</button>
-                </form>
+        <div class="card mb-4" x-data="fireflyStatus" x-init="checkStatus()">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Firefly III</span>
+                <span class="badge"
+                      :class="status === 'ok' ? 'bg-success' : 'bg-danger'"
+                      x-text="status === 'ok' ? 'Connected' : 'Disconnected'">
+                </span>
+            </div>
+            <div class="card-body">
+                <template x-if="status === 'ok'">
+                    <p class="text-success">Firefly III is properly configured and reachable.</p>
+                </template>
+                <template x-if="status !== 'ok'">
+                    <p class="text-danger">Connection failed. Please check configuration.</p>
+                    <a href="/configuration" class="btn btn-secondary">Fix Configuration</a>
+                </template>
             </div>
         </div>
     </div>
 
-    <!-- TrueLayer Config -->
+    <!-- TrueLayer Status Placeholder -->
     <div class="col-md-6">
         <div class="card mb-4">
-            <div class="card-header">TrueLayer Configuration</div>
-            <div class="card-body" x-data="{ client_id: '', client_secret: '' }">
-                <form>
-                    <div class="mb-3">
-                        <label class="form-label">Client ID</label>
-                        <input type="text" class="form-control" x-model="client_id">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Client Secret</label>
-                        <input type="password" class="form-control" x-model="client_secret">
-                    </div>
-                    <button type="button" class="btn btn-primary" @click="console.log('TrueLayer config:', { client_id, client_secret })">Save</button>
-                </form>
+            <div class="card-header">TrueLayer</div>
+            <div class="card-body">
+                <p class="text-muted">Status check not implemented yet.</p>
             </div>
         </div>
     </div>
 </div>
 
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('fireflyStatus', () => ({
+            status: null,
+            async checkStatus() {
+                try {
+                    const res = await fetch('/firefly/healthcheck');
+                    const data = await res.json();
+                    this.status = (res.ok && data.result === 'OK') ? 'ok' : 'fail';
+                } catch (err) {
+                    this.status = 'fail';
+                }
+            }
+        }));
+    });
+</script>
 {% endblock %}
