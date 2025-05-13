@@ -1,4 +1,3 @@
-from ast import Str
 import base64
 from hashlib import sha256
 import secrets
@@ -8,7 +7,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
-from pathlib import Path
 from yarl import URL
 import logging
 from contextlib import asynccontextmanager
@@ -17,6 +15,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from clients.firefly import FireflyClient
 from clients.truelayer import TrueLayerClient
 from config import Config
+from exception_handlers import (
+    truelayer_authorization_error_handler,
+    truelayer_connection_error_handler,
+    truelayer_timeout_error_handler,
+    truelayer_error_handler,
+    generic_exception_handler,
+)
 from exceptions import (
     TrueLayer2FireflyAuthorizationError,
     TrueLayer2FireflyConnectionError,
@@ -207,6 +212,25 @@ async def get_config():
     return current_config
 
 
+@app.post("/truelayer/configuration")
+async def truelayer_configuration(
+    truelayer: TrueLayerClient = Depends(get_truelayer_client),
+    truelayer_client_id: str = Form(...),
+    truelayer_client_secret: str = Form(...),
+    truelayer_redirect_uri: str = Form(...),
+):
+    """Handle the TrueLayer configuration form submission."""
+    _LOGGER.info("Starting TrueLayer configuration...")
+    config.set("truelayer_client_id", truelayer_client_id)
+    config.set("truelayer_client_secret", truelayer_client_secret)
+    config.set("truelayer_redirect_uri", truelayer_redirect_uri)
+
+    auth_url = await truelayer.get_authorization_url()
+    _LOGGER.info(f"Authorization URL: {auth_url}")
+
+    return RedirectResponse(str(auth_url), status_code=302)
+
+
 @app.get("/get-authorization-url")
 async def get_authorization_url(
     truelayer: TrueLayerClient = Depends(get_truelayer_client),
@@ -217,7 +241,7 @@ async def get_authorization_url(
     return {"url": auth_url}
 
 
-@app.get("/get-access-token")
+@app.get("/truelayer/get-access-token", name="truelayer/get-access-token")
 async def get_access_token(truelayer: TrueLayerClient = Depends(get_truelayer_client)):
     """Get the access token from TrueLayer."""
     await truelayer.exchange_authorization_code()
@@ -226,7 +250,7 @@ async def get_access_token(truelayer: TrueLayerClient = Depends(get_truelayer_cl
     return {"access_token": access_token}
 
 
-@app.get("/callback")
+@app.get("/truelayer/callback")
 async def callback(request: Request):
     code = request.query_params.get("code")
     scope = request.query_params.get("scope")
@@ -235,8 +259,9 @@ async def callback(request: Request):
     config.set("truelayer_code", code)
     config.set("truelayer_scope", scope)
 
-    return HTMLResponse(
-        content=Path("templates/index.html").read_text(), status_code=302
+    return RedirectResponse(
+        str(request.url_for("truelayer/get-access-token")),
+        status_code=302,
     )
 
 
@@ -248,47 +273,14 @@ async def get_tl_accounts(truelayer: TrueLayerClient = Depends(get_truelayer_cli
     return accounts
 
 
-@app.exception_handler(TrueLayer2FireflyAuthorizationError)
-async def truelayer_authorization_error_handler(
-    request: Request, exc: TrueLayer2FireflyAuthorizationError
-):
-    _LOGGER.error("Authorization error: %s", str(exc))
-    return JSONResponse(
-        status_code=401, content={"error": "Unauthorized access", "details": str(exc)}
-    )
-
-
-@app.exception_handler(TrueLayer2FireflyConnectionError)
-async def truelayer_connection_error_handler(
-    request: Request, exc: TrueLayer2FireflyConnectionError
-):
-    _LOGGER.error("Connection error: %s", str(exc))
-    return JSONResponse(
-        status_code=503, content={"error": "Connection error", "details": str(exc)}
-    )
-
-
-@app.exception_handler(TrueLayer2FireflyTimeoutError)
-async def truelayer_timeout_error_handler(
-    request: Request, exc: TrueLayer2FireflyTimeoutError
-):
-    _LOGGER.error("Timeout error: %s", str(exc))
-    return JSONResponse(
-        status_code=504, content={"error": "Request timeout", "details": str(exc)}
-    )
-
-
-@app.exception_handler(TrueLayer2FireflyError)
-async def truelayer_error_handler(request: Request, exc: TrueLayer2FireflyError):
-    _LOGGER.error("TrueLayer error: %s", str(exc))
-    return JSONResponse(
-        status_code=500, content={"error": "TrueLayer error", "details": str(exc)}
-    )
-
-
-@app.exception_handler(Exception)
-async def generic_exception_handler(request: Request, exc: Exception):
-    _LOGGER.exception("Unhandled exception: %s", str(exc))
-    return JSONResponse(
-        status_code=500, content={"error": "Internal server error", "details": str(exc)}
-    )
+app.add_exception_handler(
+    TrueLayer2FireflyAuthorizationError, truelayer_authorization_error_handler
+)
+app.add_exception_handler(
+    TrueLayer2FireflyConnectionError, truelayer_connection_error_handler
+)
+app.add_exception_handler(
+    TrueLayer2FireflyTimeoutError, truelayer_timeout_error_handler
+)
+app.add_exception_handler(TrueLayer2FireflyError, truelayer_error_handler)
+app.add_exception_handler(Exception, generic_exception_handler)

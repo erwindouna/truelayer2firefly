@@ -2,34 +2,41 @@
 
 from datetime import datetime
 import logging
-import os
+
 import time
 from typing import Any, Self
 import humanize
-import json
 
+import jwt
 import httpx
 from pytest import param
 from yarl import URL
-import jwt
 from config import Config
 
-from exceptions import TrueLayer2FireflyConnectionError, TrueLayer2FireflyError, TrueLayer2FireflyTimeoutError
+from exceptions import (
+    TrueLayer2FireflyConnectionError,
+    TrueLayer2FireflyError,
+    TrueLayer2FireflyTimeoutError,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class TrueLayerClient:
     """TrueLayer client for making API calls"""
 
-    def __init__(self, request_timeout: float = 10.0, client_id: str | None = None, client_secret: str | None = None, redirect_uri: str | None = None):
+    def __init__(
+        self,
+        request_timeout: float = 10.0,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        redirect_uri: str | None = None,
+    ):
         """Initialize the TrueLayer client"""
         self.client_id: str | None = client_id
         self.client_secret: str | None = client_secret
         self.redirect_uri: str | None = redirect_uri
         self.access_token: str | None = None
-
-        if not self.client_id or not self.client_secret or not self.redirect_uri:
-            _LOGGER.info("TrueLayer client ID, secret, or redirect URI not set. They probably need to be set first.")
 
         self._config = Config()
         self._request_timeout = request_timeout
@@ -38,7 +45,7 @@ class TrueLayerClient:
     @property
     def lifetime(self) -> str | None:
         """Get the lifetime of the access token"""
-        if not self._config.get("expiration_date"): # TODO: Fix this
+        if not self._config.get("expiration_date"):  # TODO: Fix this
             _LOGGER.warning("Expiration date not set in the config")
             return None
         return humanize.naturaldelta(
@@ -49,12 +56,12 @@ class TrueLayerClient:
     def import_accounts(self) -> list[dict[str, str]]:
         """Get the import accounts"""
         return self._import_accounts
-    
+
     @property
     def import_transactions(self) -> list[dict[str, str]]:
         """Get the import transactions"""
-        return self._import_transactions    
-    
+        return self._import_transactions
+
     async def _request(
         self,
         uri: str,
@@ -73,7 +80,9 @@ class TrueLayerClient:
         if auth:
             url = str(URL("https://auth.truelayer.com").join(URL(uri)))
         else:
-            url = str(URL("https://api.truelayer.com/data/v1/").join(URL(uri.lstrip("/"))))
+            url = str(
+                URL("https://api.truelayer.com/data/v1/").join(URL(uri.lstrip("/")))
+            )
 
         headers = {
             "Accept": "application/json",
@@ -95,19 +104,19 @@ class TrueLayerClient:
         try:
             if method == "POST" and auth:
                 _LOGGER.debug("Sending POST request with form-encoded data")
-                headers = {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                }
+                headers = {"Content-Type": "application/x-www-form-urlencoded"}
                 response = await self._client.request(
                     method=method,
                     url=url,
                     headers=headers,
-                    data=params, 
+                    data=params,
                 )
             else:
                 if self._config.get("truelayer_access_token"):
-                    headers["Authorization"] = f"Bearer {self._config.get('truelayer_access_token')}"
-                    
+                    headers["Authorization"] = (
+                        f"Bearer {self._config.get('truelayer_access_token')}"
+                    )
+
                 _LOGGER.debug("URL: %s", url)
                 response = await self._client.request(
                     method=method,
@@ -139,8 +148,8 @@ class TrueLayerClient:
 
         params = {
             "response_type": "code",
-            "client_id": self.client_id,
-            "redirect_uri": self.redirect_uri,
+            "client_id": self._config.get("truelayer_client_id"),
+            "redirect_uri": self._config.get("truelayer_redirect_uri"),
             "nonce": int(time.time()),
             "scope": "info accounts balance cards transactions direct_debits standing_orders offline_access",
             "providers": (
@@ -148,7 +157,7 @@ class TrueLayerClient:
                 "es-xs2a-all it-xs2a-all pt-xs2a-all be-xs2a-all fi-xs2a-all dk-xs2a-all "
                 "no-xs2a-all pl-xs2a-all at-xs2a-all ro-xs2a-all lt-xs2a-all lv-xs2a-all ee-xs2a-all"
             ),
-            }
+        }
 
         return str(URL("https://auth.truelayer.com").with_query(params))
 
@@ -168,17 +177,21 @@ class TrueLayerClient:
             method="POST",
             params=params,
         )
-        
+
         _LOGGER.info("Received access token response: %s", response)
 
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
-        await self.__extract_info_from_token
+        self.access_token = response["access_token"]
+        self.refresh_token = response["refresh_token"]
 
-    async def __extract_info_from_token(self) -> None:
+        await self._extract_info_from_token()
+
+    async def _extract_info_from_token(self) -> None:
         """Extract information from the access token."""
-        decoded = jwt.decode(self._config.get("truelayer_access_token"), verify=False)
+        _LOGGER.info("Extracting information from access token: %s", self.access_token)
+        decoded = jwt.decode(self.access_token, options={"verify_signature": False})
         self._config.set("credentials_id", decoded["sub"])
         self._config.set("expiration_date", decoded["exp"])
 

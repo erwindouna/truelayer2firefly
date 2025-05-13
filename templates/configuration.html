@@ -5,7 +5,7 @@
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">Firefly III Configuration</div>
-            <div class="card-body" x-data="{ client_id: '', url: '' }">
+            <div class="card-body" x-data="{ firefly_url: '', client_id: '' }">
                 <form method="post" action="/firefly/configuration">
                     <div class="mb-3">
                         <label class="form-label">API URL</label>
@@ -31,17 +31,21 @@
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">TrueLayer Configuration</div>
-            <div class="card-body" x-data="{ client_id: '', client_secret: '' }">
-                <form>
+            <div class="card-body" x-data="{ truelayer_client_id: '', truelayer_client_secret: '', truelayer_redirect_uri: '' }">
+                <form method="post" action="/truelayer/configuration">
                     <div class="mb-3">
                         <label class="form-label">Client ID</label>
-                        <input type="text" class="form-control" x-model="client_id">
+                        <input type="text" class="form-control" x-model="truelayer_client_id" name="truelayer_client_id" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Client Secret</label>
-                        <input type="password" class="form-control" x-model="client_secret">
+                        <input type="password" class="form-control" x-model="truelayer_client_secret" name="truelayer_client_secret" required>
                     </div>
-                    <button type="button" class="btn btn-primary" @click="console.log('TrueLayer config:', { client_id, client_secret })">Save</button>
+                    <div class="mb-3">
+                        <label class="form-label">Redirect URI</label>
+                        <input type="text" class="form-control" x-model="truelayer_redirect_uri" name="truelayer_redirect_uri" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
                 </form>
             </div>
         </div>
