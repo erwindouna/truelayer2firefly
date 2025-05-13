@@ -1,9 +1,15 @@
 import base64
+from collections.abc import AsyncGenerator
 from hashlib import sha256
 import secrets
 import string
 from fastapi import FastAPI, Form, Request, Depends, params
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
@@ -28,6 +34,7 @@ from exceptions import (
     TrueLayer2FireflyError,
     TrueLayer2FireflyTimeoutError,
 )
+from importer2firefly import Import2Firefly
 
 logging.basicConfig(
     level=logging.INFO,
@@ -205,13 +212,6 @@ async def firefly_healthcheck(firefly: FireflyClient = Depends(FireflyClient)):
     return {"status": "OK"}
 
 
-@app.get("/config")
-async def get_config():
-    current_config = config._config
-    _LOGGER.info("Configuration successfully read.")
-    return current_config
-
-
 @app.post("/truelayer/configuration")
 async def truelayer_configuration(
     truelayer: TrueLayerClient = Depends(get_truelayer_client),
@@ -282,12 +282,27 @@ async def truelayer_healthcheck(
     return {"status": "OK"}
 
 
-@app.get("/get-tl-accounts")
-async def get_tl_accounts(truelayer: TrueLayerClient = Depends(get_truelayer_client)):
-    """Get the accounts from TrueLayer."""
-    accounts = await truelayer.get_accounts()
-    _LOGGER.info("Accounts successfully retrieved.")
-    return accounts
+@app.get("/import/stream")
+async def import_stream(
+    request: Request,
+    truelayer: TrueLayerClient = Depends(get_truelayer_client),
+    firefly: FireflyClient = Depends(FireflyClient),
+) -> StreamingResponse:
+    """Stream the import process."""
+    _LOGGER.info("Starting import process")
+
+    importer = Import2Firefly(truelayer, firefly)
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        """Generate events for the import process."""
+        try:
+            async for event in importer.start_import():
+                yield f"data: {event}\n\n"
+        except Exception as e:
+            _LOGGER.error(f"Error during import: {e}")
+            yield f"data: Error: {e}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 app.add_exception_handler(

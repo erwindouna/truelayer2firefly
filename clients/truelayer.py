@@ -2,15 +2,16 @@
 
 from datetime import datetime
 import logging
-
+import os
 import time
 from typing import Any, Self
 import humanize
+import json
 
-import jwt
 import httpx
 from pytest import param
 from yarl import URL
+import jwt
 from config import Config
 
 from exceptions import (
@@ -38,6 +39,11 @@ class TrueLayerClient:
         self.redirect_uri: str | None = redirect_uri
         self.access_token: str | None = None
 
+        if not self.client_id or not self.client_secret or not self.redirect_uri:
+            _LOGGER.info(
+                "TrueLayer client ID, secret, or redirect URI not set. They probably need to be set first."
+            )
+
         self._config = Config()
         self._request_timeout = request_timeout
         self._client: httpx.AsyncClient | None = None
@@ -45,11 +51,12 @@ class TrueLayerClient:
     @property
     def lifetime(self) -> str | None:
         """Get the lifetime of the access token"""
-        if not self._config.get("expiration_date"):  # TODO: Fix this
+        if not self._config.get("truelayer_expiration_date"):  # TODO: Fix this
             _LOGGER.warning("Expiration date not set in the config")
             return None
         return humanize.naturaldelta(
-            datetime.fromtimestamp(self._config.get("expiration_date")) - datetime.now()
+            datetime.fromtimestamp(self._config.get("truelayer_expiration_date"))
+            - datetime.now()
         )
 
     @property
@@ -94,6 +101,8 @@ class TrueLayerClient:
 
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=self._request_timeout)
+
+        await self._refresh_token()
 
         # Sanitize params and json by removing None values
         if params:
@@ -143,6 +152,68 @@ class TrueLayerClient:
 
         return response
 
+    async def _refresh_token(self) -> None:
+        """Refresh the access token if it is expired."""
+        if not self._config.get("truelayer_refresh_token"):
+            _LOGGER.debug("No refresh token available")
+            return
+
+        _LOGGER.info("Token will expire in %s", self.lifetime)
+
+        if self._config.get(
+            "truelayer_expiration_date"
+        ) and datetime.now().timestamp() < self._config.get(
+            "truelayer_expiration_date"
+        ):
+            _LOGGER.debug("Access token is still valid, no need to refresh")
+            return
+
+        params = {
+            "grant_type": "refresh_token",
+            "client_id": self._config.get("truelayer_client_id"),
+            "client_secret": self._config.get("truelayer_client_secret"),
+            "refresh_token": self._config.get("truelayer_refresh_token"),
+        }
+
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": "TrueLayer2Firefly",
+        }
+
+        url = str(URL("https://auth.truelayer.com/connect/token"))
+        try:
+            _LOGGER.info("Refreshing access token")
+            response = await self._client.request(
+                method="POST",
+                url=url,
+                headers=headers,
+                json=params,
+            )
+            response.raise_for_status()
+        except httpx.RequestError as err:
+            msg = f"Request error during {url}: {err}"
+            raise TrueLayer2FireflyConnectionError(msg) from err
+        except httpx.HTTPStatusError as err:
+            msg = f"HTTP status error during  {url}: {err.response.status_code}, {err.response.text}"
+            raise TrueLayer2FireflyConnectionError(msg) from err
+
+        content_type = response.headers.get("Content-Type", "")
+        if "application/json" not in content_type:
+            msg = "Unexpected content type response from the TrueLayer API"
+            raise TrueLayer2FireflyError(
+                msg,
+                {"Content-Type": content_type, "response": response.text},
+            )
+
+        response = response.json()
+
+        _LOGGER.info("Received new access token response: %s", response)
+        self._config.set("truelayer_access_token", response["access_token"])
+        self._config.set("truelayer_refresh_token", response["refresh_token"])
+
+        await self._extract_info_from_token()
+        _LOGGER.info("Access token refreshed successfully")
+
     async def get_authorization_url(self) -> str:
         """Get the authorization URL for TrueLayer."""
 
@@ -179,19 +250,21 @@ class TrueLayerClient:
         )
 
         _LOGGER.info("Received access token response: %s", response)
+
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
-        await self._extract_info_from_token()
+        await self._extract_info_from_token
 
     async def _extract_info_from_token(self) -> None:
         """Extract information from the access token."""
         decoded = jwt.decode(
             self._config.get("truelayer_access_token"),
             options={"verify_signature": False},
+            algorithms=["RS256"],
         )
-        self._config.set("credentials_id", decoded["sub"])
-        self._config.set("expiration_date", decoded["exp"])
+        self._config.set("truelayer_credentials_id", decoded["sub"])
+        self._config.set("truelayer_expiration_date", decoded["exp"])
 
     async def get_accounts(self) -> dict[str, Any]:
         """Get the accounts from TrueLayer."""

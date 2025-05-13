@@ -2,6 +2,7 @@
 
 {% block content %}
 <div class="row" x-data="statusCheck" x-init="checkAll()">
+    <!-- Firefly III Status -->
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -31,6 +32,7 @@
         </div>
     </div>
 
+    <!-- TrueLayer Status -->
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -60,27 +62,45 @@
         </div>
     </div>
 
-    <div class="col-md-12">
-        <template x-if="firefly.status === 'ok' && truelayer.status === 'ok'">
-            <div class="card mb-4">
-                <div class="card-header">Import</div>
-                <div class="card-body">
-                    <p>To import transactions from TrueLayer to Firefly III, click the button below.</p>
-                    <a href="/import" class="btn btn-primary">Import Transactions</a>
-                </div>
+    <!-- Import UI -->
+    <div class="col-md-12" x-show="firefly.status === 'ok' && truelayer.status === 'ok'" x-data="importProgress">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Import</span>
+                <button class="btn btn-primary" @click="startImport" :disabled="isRunning">Start Import</button>
             </div>
-        </template>
+            <div class="card-body">
+                <template x-if="!isRunning && messages.length === 0">
+                    <p>Click the button above to start importing transactions from TrueLayer to Firefly III.</p>
+                </template>
 
-        <template x-if="firefly.status !== 'ok' || truelayer.status !== 'ok'">
+                <template x-if="isRunning">
+                    <p class="text-muted">Running import... please wait.</p>
+                </template>
+
+                <ul class="list-group mt-3" x-show="messages.length">
+                    <template x-for="msg in messages" :key="msg">
+                        <li class="list-group-item" x-text="msg"></li>
+                    </template>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warning if services are not OK -->
+    <template x-if="firefly.status !== 'ok' || truelayer.status !== 'ok'">
+        <div class="col-md-12">
             <div class="alert alert-warning" role="alert">
                 One or more services are not properly configured. Please check the configuration.
             </div>
-        </template>
-    </div>
+        </div>
+    </template>
 </div>
 
+<!-- Alpine Logic -->
 <script>
     document.addEventListener('alpine:init', () => {
+        // Service status checker
         Alpine.data('statusCheck', () => ({
             firefly: { status: null },
             truelayer: { status: null },
@@ -113,7 +133,35 @@
                 }
             }
         }));
+
+        // Import progress stream
+        Alpine.data('importProgress', () => ({
+            messages: [],
+            isRunning: false,
+
+            startImport() {
+                this.isRunning = true;
+                this.messages = [];
+
+                const source = new EventSource("/import/stream");
+
+                source.onmessage = (event) => {
+                    this.messages.push(event.data);
+                };
+
+                source.onerror = (err) => {
+                    console.error("SSE error", err);
+                    source.close();
+                    this.isRunning = false;
+                };
+
+                source.addEventListener("end", () => {
+                    source.close();
+                    this.isRunning = false;
+                    this.messages.push("✅ Import completed.");
+                });
+            }
+        }));
     });
 </script>
-
 {% endblock %}

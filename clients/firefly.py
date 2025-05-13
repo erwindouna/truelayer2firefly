@@ -15,14 +15,24 @@ from yarl import URL
 import jwt
 from config import Config
 
-from exceptions import TrueLayer2FireflyConnectionError, TrueLayer2FireflyError, TrueLayer2FireflyTimeoutError
+from exceptions import (
+    TrueLayer2FireflyConnectionError,
+    TrueLayer2FireflyError,
+    TrueLayer2FireflyTimeoutError,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class FireflyClient:
     """Firefly client for making API calls"""
 
-    def __init__(self, request_timeout: float = 10.0, access_token: str|None=None, url: str|None=None):
+    def __init__(
+        self,
+        request_timeout: float = 10.0,
+        access_token: str | None = None,
+        url: str | None = None,
+    ):
         """Initialize the Firefly client"""
         self.url: str | None = url
         self.request_timeout: float = request_timeout
@@ -30,8 +40,8 @@ class FireflyClient:
 
         self._config: Config = Config()
         self._request_timeout: float = request_timeout
-        self._client: httpx.AsyncClient | None = None   
-    
+        self._client: httpx.AsyncClient | None = None
+
     async def _request(
         self,
         uri: str,
@@ -51,7 +61,7 @@ class FireflyClient:
             url = str(URL(self.url).join(URL(uri)))
         else:
             url = str(URL(self.url).join(URL(f"api/v1/{uri}")))
-            
+
         headers = {
             "Accept": "application/json",
             "User-Agent": "TrueLayer2Firefly",
@@ -70,18 +80,18 @@ class FireflyClient:
 
         try:
             if method == "POST":
-                headers = {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                }
+                headers = {"Content-Type": "application/x-www-form-urlencoded"}
                 response = await self._client.request(
                     method=method,
                     url=url,
                     headers=headers,
-                    data=params, 
+                    data=params,
                 )
             else:
                 if self._config.get("firefly_access_token"):
-                    headers["Authorization"] = f"Bearer {self._config.get('firefly_access_token')}"
+                    headers["Authorization"] = (
+                        f"Bearer {self._config.get('firefly_access_token')}"
+                    )
 
                 _LOGGER.debug("URL: %s", url)
                 response = await self._client.request(
@@ -100,19 +110,26 @@ class FireflyClient:
             raise TrueLayer2FireflyConnectionError(msg) from err
 
         content_type = response.headers.get("Content-Type", "")
-        if "application/json" not in content_type:
-            msg = "Unexpected content type response from the TrueLayer API"
+        if "application/vnd.api+json" not in content_type:
+            msg = "Unexpected content type response from the Firefly API"
             raise TrueLayer2FireflyError(
                 msg,
                 {"Content-Type": content_type, "response": response.text},
             )
 
         return response
-  
+
     async def healthcheck(self) -> None:
         """Check the health of the Firefly API."""
         return await self._request(
             uri="about",
+            method="GET",
+        )
+
+    async def get_accounts(self) -> dict[str, Any]:
+        """Get the accounts from the Firefly API."""
+        return await self._request(
+            uri="accounts",
             method="GET",
         )
 
