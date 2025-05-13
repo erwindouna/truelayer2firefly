@@ -1,30 +1,27 @@
 {% extends "layout.html" %}
 
-{% block title %}Integration Status{% endblock %}
-
 {% block content %}
-<div class="row">
-    <!-- Firefly III Status -->
+<div class="row" x-data="statusCheck" x-init="checkAll()">
     <div class="col-md-6">
-        <div class="card mb-4" x-data="fireflyStatus" x-init="checkStatus()">
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Firefly III</span>
                 <span class="badge"
-                      :class="status === 'ok' ? 'bg-success' : (status === 'fail' ? 'bg-danger' : 'bg-warning')"
-                      x-text="status === 'ok' ? 'Connected' : (status === 'fail' ? 'Disconnected' : 'Checking...')">
+                      :class="firefly.status === 'ok' ? 'bg-success' : (firefly.status === 'fail' ? 'bg-danger' : 'bg-warning')"
+                      x-text="firefly.status === 'ok' ? 'Connected' : (firefly.status === 'fail' ? 'Disconnected' : 'Checking...')">
                 </span>
             </div>
             <div class="card-body">
-                <template x-if="status === null">
+                <template x-if="firefly.status === null">
                     <p class="text-muted">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                         Checking status...
                     </p>
                 </template>
-                <template x-if="status === 'ok'">
+                <template x-if="firefly.status === 'ok'">
                     <p class="text-success">Firefly III is properly configured and reachable.</p>
                 </template>
-                <template x-if="status === 'fail'">
+                <template x-if="firefly.status === 'fail'">
                     <p class="text-danger">
                         Connection failed. Please check configuration.
                         <a href="/configuration" class="btn btn-primary ms-2">Fix Configuration</a>
@@ -34,27 +31,26 @@
         </div>
     </div>
 
-    <!-- TrueLayer Status -->
     <div class="col-md-6">
-        <div class="card mb-4" x-data="truelayerStatus" x-init="checkStatus()">
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>TrueLayer</span>
                 <span class="badge"
-                      :class="status === 'ok' ? 'bg-success' : (status === 'fail' ? 'bg-danger' : 'bg-warning')"
-                      x-text="status === 'ok' ? 'Connected' : (status === 'fail' ? 'Disconnected' : 'Checking...')">
+                      :class="truelayer.status === 'ok' ? 'bg-success' : (truelayer.status === 'fail' ? 'bg-danger' : 'bg-warning')"
+                      x-text="truelayer.status === 'ok' ? 'Connected' : (truelayer.status === 'fail' ? 'Disconnected' : 'Checking...')">
                 </span>
             </div>
             <div class="card-body">
-                <template x-if="status === null">
+                <template x-if="truelayer.status === null">
                     <p class="text-muted">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                         Checking status...
                     </p>
                 </template>
-                <template x-if="status === 'ok'">
+                <template x-if="truelayer.status === 'ok'">
                     <p class="text-success">TrueLayer is properly configured and reachable.</p>
                 </template>
-                <template x-if="status === 'fail'">
+                <template x-if="truelayer.status === 'fail'">
                     <p class="text-danger">
                         Connection failed. Please check configuration.
                         <a href="/configuration" class="btn btn-primary ms-2">Fix Configuration</a>
@@ -62,40 +58,62 @@
                 </template>
             </div>
         </div>
+    </div>
+
+    <div class="col-md-12">
+        <template x-if="firefly.status === 'ok' && truelayer.status === 'ok'">
+            <div class="card mb-4">
+                <div class="card-header">Import</div>
+                <div class="card-body">
+                    <p>To import transactions from TrueLayer to Firefly III, click the button below.</p>
+                    <a href="/import" class="btn btn-primary">Import Transactions</a>
+                </div>
+            </div>
+        </template>
+
+        <template x-if="firefly.status !== 'ok' || truelayer.status !== 'ok'">
+            <div class="alert alert-warning" role="alert">
+                One or more services are not properly configured. Please check the configuration.
+            </div>
+        </template>
     </div>
 </div>
 
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('fireflyStatus', () => ({
-            status: null,
-            async checkStatus() {
+        Alpine.data('statusCheck', () => ({
+            firefly: { status: null },
+            truelayer: { status: null },
+
+            async checkAll() {
+                await Promise.all([this.checkFirefly(), this.checkTrueLayer()]);
+            },
+
+            async checkFirefly() {
                 try {
                     const res = await fetch('/firefly/healthcheck');
                     const data = await res.json();
-                    this.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
-                    console.log('Firefly III status:', this.status);
+                    this.firefly.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
+                    console.log("Firefly III status:", this.firefly.status);	
                 } catch (err) {
-                    this.status = 'fail';
+                    this.firefly.status = 'fail';
                     console.error('Error checking Firefly III status:', err);
                 }
-            }
-        }));
+            },
 
-        Alpine.data('truelayerStatus', () => ({
-            status: null,
-            async checkStatus() {
+            async checkTrueLayer() {
                 try {
                     const res = await fetch('/truelayer/healthcheck');
                     const data = await res.json();
-                    this.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
-                    console.log('TrueLayer status:', this.status);
+                    this.truelayer.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
+                    console.log("TrueLayer status:", this.truelayer.status);
                 } catch (err) {
-                    this.status = 'fail';
+                    this.truelayer.status = 'fail';
                     console.error('Error checking TrueLayer status:', err);
                 }
             }
         }));
     });
 </script>
+
 {% endblock %}
