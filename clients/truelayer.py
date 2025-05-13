@@ -141,7 +141,7 @@ class TrueLayerClient:
                 {"Content-Type": content_type, "response": response.text},
             )
 
-        return response.json()
+        return response
 
     async def get_authorization_url(self) -> str:
         """Get the authorization URL for TrueLayer."""
@@ -179,35 +179,26 @@ class TrueLayerClient:
         )
 
         _LOGGER.info("Received access token response: %s", response)
-
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
-
-        self.access_token = response["access_token"]
-        self.refresh_token = response["refresh_token"]
 
         await self._extract_info_from_token()
 
     async def _extract_info_from_token(self) -> None:
         """Extract information from the access token."""
-        _LOGGER.info("Extracting information from access token: %s", self.access_token)
-        decoded = jwt.decode(self.access_token, options={"verify_signature": False})
+        decoded = jwt.decode(
+            self._config.get("truelayer_access_token"),
+            options={"verify_signature": False},
+        )
         self._config.set("credentials_id", decoded["sub"])
         self._config.set("expiration_date", decoded["exp"])
 
     async def get_accounts(self) -> dict[str, Any]:
         """Get the accounts from TrueLayer."""
-        response = await self._request(
+        return await self._request(
             uri="accounts",
             method="GET",
         )
-
-        _LOGGER.info("Received accounts response: %s", response)
-
-        if "accounts" not in response:
-            raise TrueLayer2FireflyError("No accounts found in the response")
-
-        return response["accounts"]
 
     async def close(self) -> None:
         """Close the HTTPX client session."""

@@ -231,23 +231,18 @@ async def truelayer_configuration(
     return RedirectResponse(str(auth_url), status_code=302)
 
 
-@app.get("/get-authorization-url")
-async def get_authorization_url(
-    truelayer: TrueLayerClient = Depends(get_truelayer_client),
-):
-    """Get the authorization URL for TrueLayer."""
-    auth_url = await truelayer.get_authorization_url()
-    _LOGGER.info(f"Authorization URL: {auth_url}")
-    return {"url": auth_url}
-
-
 @app.get("/truelayer/get-access-token", name="truelayer/get-access-token")
-async def get_access_token(truelayer: TrueLayerClient = Depends(get_truelayer_client)):
+async def get_access_token(
+    request: Request, truelayer: TrueLayerClient = Depends(get_truelayer_client)
+):
     """Get the access token from TrueLayer."""
     await truelayer.exchange_authorization_code()
-    access_token = config.get("truelayer_access_token")
     _LOGGER.info("Access token successfully retrieved.")
-    return {"access_token": access_token}
+
+    return RedirectResponse(
+        str(request.url_for("index")),
+        status_code=302,
+    )
 
 
 @app.get("/truelayer/callback")
@@ -263,6 +258,28 @@ async def callback(request: Request):
         str(request.url_for("truelayer/get-access-token")),
         status_code=302,
     )
+
+
+@app.get("/truelayer/healthcheck")
+async def truelayer_healthcheck(
+    truelayer: TrueLayerClient = Depends(get_truelayer_client),
+):
+    """Check the health of the TrueLayer API."""
+    response = await truelayer.get_accounts()
+    if response.status_code != 200:
+        _LOGGER.error(
+            "TrueLayer API health check failed with status code %s",
+            response.status_code,
+        )
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "TrueLayer API is not healthy",
+                "status_code": response.status_code,
+            },
+        )
+
+    return {"status": "OK"}
 
 
 @app.get("/get-tl-accounts")
