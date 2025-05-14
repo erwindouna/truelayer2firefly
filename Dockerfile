@@ -23,8 +23,8 @@ RUN poetry install --no-interaction --no-ansi --only main
 COPY . .
 
 # TODO: check this later, since it will change
-EXPOSE 8000
+EXPOSE 3000
 
 # Run the app
 # TODO: work on this later, to make it more flexible
-CMD ["poetry", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "uvicorn", "truelayer2firefly:app", "--host", "0.0.0.0", "--port", "3000"]
