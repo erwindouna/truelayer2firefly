@@ -115,7 +115,10 @@ class FireflyClient:
             raise TrueLayer2FireflyConnectionError(msg) from err
 
         content_type = response.headers.get("Content-Type", "")
-        if "application/vnd.api+json" not in content_type:
+        if not (
+            "application/vnd.api+json" in content_type
+            or "application/json" in content_type
+        ):
             msg = "Unexpected content type response from the Firefly API"
             raise TrueLayer2FireflyError(
                 msg,

@@ -159,7 +159,7 @@ async def firefly_configuration(
     )
 
     _LOGGER.info("Query parameters are %s", query_params)
-    _LOGGER.info(f"Now redirecting to {auth_url}")
+    _LOGGER.info("Now redirecting to %s", auth_url)
 
     return RedirectResponse(str(auth_url), status_code=302)
 
@@ -196,6 +196,8 @@ async def firefly_callback(
         auth=True,
         params=params,
     )
+
+    response = response.json()
 
     _LOGGER.info("Received access token response: %s", response)
     config.set("firefly_access_token", response["access_token"])
@@ -269,11 +271,12 @@ async def get_access_token(
 
 
 @app.get("/truelayer/callback")
-async def callback(request: Request):
+async def callback(request: Request) -> None:
+    """Handle the callback from TrueLayer."""
     code = request.query_params.get("code")
     scope = request.query_params.get("scope")
 
-    _LOGGER.info(f"Received code: {code} and scope: {scope}")
+    _LOGGER.info("Received code: %s and scope: %s", code, scope)
     config.set("truelayer_code", code)
     config.set("truelayer_scope", scope)
 
