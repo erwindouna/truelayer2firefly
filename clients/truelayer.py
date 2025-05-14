@@ -87,7 +87,6 @@ class TrueLayerClient:
         self.client_id = self._config.get("truelayer_client_id")
         self.client_secret = self._config.get("truelayer_client_secret")
         self.redirect_uri = self._config.get("truelayer_redirect_uri")
-        self.refresh
 
         if auth:
             url = str(URL("https://auth.truelayer.com").join(URL(uri)))
@@ -286,7 +285,7 @@ class TrueLayerClient:
         """Close the HTTPX client session."""
         if self._client:
             await self._client.aclose()
-            _LOGGER.info("Closed HTTPX client session")
+            _LOGGER.info("Closed TrueLayer HTTPX client session")
 
     async def __aenter__(self) -> Self:
         """Async enter."""

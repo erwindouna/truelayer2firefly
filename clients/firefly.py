@@ -137,7 +137,7 @@ class FireflyClient:
         """Close the HTTPX client session."""
         if self._client:
             await self._client.aclose()
-            _LOGGER.info("Closed HTTPX client session")
+            _LOGGER.info("Closed Firefly HTTPX client session")
 
     async def __aenter__(self) -> Self:
         """Async enter."""

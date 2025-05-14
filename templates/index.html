@@ -111,6 +111,9 @@
                     const data = await res.json();
                     this.firefly.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
                     console.log("Firefly III status:", this.firefly.status);
+                    if (this.firefly.status === 'fail') {
+                        console.error('Firefly III health check failed:', data);
+                    }
                 } catch (err) {
                     this.firefly.status = 'fail';
                     console.error('Error checking Firefly III status:', err);
@@ -123,6 +126,9 @@
                     const data = await res.json();
                     this.truelayer.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
                     console.log("TrueLayer status:", this.truelayer.status);
+                    if (this.truelayer.status === 'fail') {
+                        console.error('TrueLayer health check failed:', data);
+                    }
                 } catch (err) {
                     this.truelayer.status = 'fail';
                     console.error('Error checking TrueLayer status:', err);

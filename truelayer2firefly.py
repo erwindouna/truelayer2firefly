@@ -212,6 +212,13 @@ async def firefly_callback(
 async def firefly_healthcheck(firefly: FireflyClient = Depends(FireflyClient)):
     """Check the health of the Firefly API."""
 
+    if not firefly.access_token:
+        _LOGGER.warning("Firefly access token is not set")
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Firefly API access token is not set"},
+        )
+
     response = await firefly.healthcheck()
     if response.status_code != 200:
         _LOGGER.error(
@@ -281,6 +288,13 @@ async def truelayer_healthcheck(
     truelayer: TrueLayerClient = Depends(get_truelayer_client),
 ):
     """Check the health of the TrueLayer API."""
+    if not truelayer.access_token:
+        _LOGGER.warning("TrueLayer access token is not set")
+        return JSONResponse(
+            status_code=503,
+            content={"error": "TrueLayer API access token is not set"},
+        )
+
     response = await truelayer.get_accounts()
     if response.status_code != 200:
         _LOGGER.error(
