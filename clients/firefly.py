@@ -201,6 +201,19 @@ class FireflyClient:
 
         return response
 
+    async def create_transaction(
+        self,
+        transaction_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Create a transaction in Firefly."""
+        response = await self._request(
+            uri="transactions",
+            method="POST",
+            json=transaction_data,
+        )
+
+        return response
+
     async def close(self) -> None:
         """Close the HTTPX client session."""
         if self._client:

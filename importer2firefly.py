@@ -54,9 +54,6 @@ class Import2Firefly:
         yield "Firefly: Fetching accounts from Firefly"
         firefly_accounts = await self._firefly_client.get_account_paginated()
         yield f"Firefly: A total of {len(firefly_accounts)} account(s) found"
-        for account in firefly_accounts:
-            yield f"Firefly account: {account['attributes']}"
-            await asyncio.sleep(0.05)
 
         yield "Matching account(s) between TrueLayer and Firefly"
 
@@ -64,7 +61,6 @@ class Import2Firefly:
             import_account: dict[str, Any] = {}
             tr_iban = truelayer_account["account_number"].get("iban")
             yield f"Checking matches for TrueLayer account {tr_iban}"
-            await asyncio.sleep(0)
 
             for firefly_account in firefly_accounts:
                 ff_iban = firefly_account["attributes"].get("iban")
@@ -87,7 +83,6 @@ class Import2Firefly:
             transactions = await self._truelayer_client.get_transactions(
                 truelayer_account["account_id"]
             )
-            await asyncio.sleep(0.1)
 
             if transactions.status_code != 200:
                 yield f"Error fetching transactions from TrueLayer: {transactions.text}"
@@ -100,13 +95,11 @@ class Import2Firefly:
 
             txns = parsed["results"]
             yield f"TrueLayer: A total of {len(txns)} transaction(s) found"
-            await asyncio.sleep(0)
-
             yield "TrueLayer: Matching transactions to Firefly account"
+
             matching = 0
             unmatching = 0
             newly_created = 0
-
             total_transactions = len(txns)
             for i, txn in enumerate(txns, start=1):
                 cp_iban = txn.get("meta", {}).get("counter_party_iban")
@@ -132,7 +125,6 @@ class Import2Firefly:
                             yield f"Matching account found via IBAN: {txn['description']} - {cp_iban}"
                             linked_account = firefly_account
                             matching += 1
-                            await asyncio.sleep(0.01)
                             break
 
                     if linked_account is None:
@@ -155,13 +147,58 @@ class Import2Firefly:
                             yield f"Error creating account in Firefly: {response.text}"
                             continue
                         yield f"New account created: {txn.get('meta', {}).get('counter_party_preferred_name')} - {cp_iban}"
+                        linked_account = response.json()["data"]
                         newly_created += 1
-
                 else:
                     unmatching += 1
+                    # TODO: find the unknown destination account
                     yield f"Transaction has no IBAN: {txn['description']}"
 
-                # Progress event for frontend
+                # Ensure the amount is always positive
+                amount = abs(txn["amount"])
+                import_transaction = {
+                    "error_if_duplicate_hash": True,
+                    "apply_rules": True,
+                    "fire_webhooks": True,
+                    "group_title": "Split transaction title.",
+                    "transactions": [
+                        {
+                            "description": txn["description"],
+                            "date": txn["timestamp"],
+                            "amount": amount,
+                            "type": (
+                                "revenue"
+                                if transaction_type == "deposit"
+                                else "withdrawal"
+                            ),
+                            "destination_id": (
+                                4
+                                if linked_account is None
+                                else linked_account[
+                                    "id"
+                                ]  # TODO: find the unknown destination account
+                            ),
+                            "source_id": import_account["id"],
+                            "source_name": import_account["attributes"]["name"],
+                            "account_id": import_account["id"],
+                            "linked_account_id": txn["transaction_id"],
+                        }
+                    ],
+                }
+                try:
+                    response = await self._firefly_client.create_transaction(
+                        import_transaction
+                    )
+                except Exception as e:
+                    yield f"Error creating transaction in Firefly: {e}"
+                if response.status_code == 200:
+                    yield f"Transaction created: {txn['description']} - {txn['amount']} - {txn['timestamp']}"
+                elif response.status_code == 442:
+                    yield f"Transaction already exists: {txn['description']} - {txn['amount']} - {txn['timestamp']}"
+                else:
+                    yield f"Error creating transaction in Firefly: {response.text}"
+                await asyncio.sleep(0)
+
                 yield {
                     "type": "progress",
                     "data": {
@@ -170,7 +207,7 @@ class Import2Firefly:
                         "total": total_transactions,
                     },
                 }
-                await asyncio.sleep(0.03)
+                await asyncio.sleep(0)
 
             yield f"Report: {matching} matching and {unmatching} unmatching and {newly_created} newly created accounts(s)"
             await asyncio.sleep(0)
