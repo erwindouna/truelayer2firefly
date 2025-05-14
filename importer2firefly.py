@@ -6,6 +6,8 @@ from datetime import datetime
 import logging
 from typing import Any, Self
 
+from attr import attributes
+
 from clients.firefly import FireflyClient
 from clients.truelayer import TrueLayerClient
 from config import Config
@@ -28,7 +30,7 @@ class Import2Firefly:
     async def start_import(self) -> AsyncGenerator[Any, Any]:
         """Start the import process."""
         _LOGGER.info("Starting import process")
-        yield "Fetching accounts from TrueLayer"
+        yield "TrueLayer: Fetching accounts from TrueLayer"
         response = await self._truelayer_client.get_accounts()
         truelayer_accounts = response.json()
 
@@ -43,29 +45,69 @@ class Import2Firefly:
             return
 
         truelayer_accounts = truelayer_accounts["results"]
-
-        yield "A total of {} account(s) found".format(len(truelayer_accounts))
         for account in truelayer_accounts:
             _LOGGER.info("Account: %s", account)
-            yield "Account: {}".format(account)
+            yield "TrueLayer account: {}".format(account)
+        yield "TrueLayer: A total of {} account(s) found".format(
+            len(truelayer_accounts)
+        )
 
-        yield "Fetching accounts from Firefly"
+        yield "Firefly: Fetching accounts from Firefly"
 
-        response = await self._firefly_client.get_accounts()
-        firefly_accounts = response.json()
+        firefly_accounts = await self._firefly_client.get_account_paginated()
 
-        if response.status_code != 200:
-            _LOGGER.error("Error fetching accounts from Firefly: %s", response.text)
-            yield "Error fetching accounts from Firefly: {}".format(response.text)
-            return
-
-        if "data" not in firefly_accounts:
-            _LOGGER.warning("No accounts found in Firefly")
-            yield "No accounts found in Firefly"
-            return
-        firefly_accounts = firefly_accounts["data"]
-
-        yield "A total of {} account(s) found".format(len(firefly_accounts))
         for account in firefly_accounts:
             _LOGGER.info("Account: %s", account)
-            yield "Account: {}".format(account)
+            yield "Firefly account: {}".format(account)
+        yield "Firefly: A total of {} account(s) found".format(len(firefly_accounts))
+
+        yield "Matching account(s) between TrueLayer and Firefly"
+        for truelayer_account in truelayer_accounts:
+            import_account: dict[str, Any] = {}
+            for firefly_account in firefly_accounts:
+                if (
+                    truelayer_account["account_number"]["iban"]
+                    == firefly_account["attributes"]["iban"]
+                ):
+                    yield "Matching account found: TrueLayer {} and Firefly {}".format(
+                        truelayer_account["account_number"]["iban"],
+                        firefly_account["attributes"]["iban"],
+                    )
+
+                    if firefly_account["attributes"]["account_role"] == "defaultAsset":
+                        import_account = firefly_account
+                        yield "Firefly account is a default asset account, let's continue"
+                        break
+
+            if not import_account:
+                yield "No matching account found for TrueLayer account {}".format(
+                    truelayer_account["account_number"]["iban"]
+                )
+                continue
+
+            yield "TrueLayer: Fetching transactions for account {}. This can take a few seconds...".format(
+                truelayer_account["account_number"]["iban"]
+            )
+            transactions = await self._truelayer_client.get_transactions(
+                truelayer_account["account_id"]
+            )
+
+            if transactions.status_code != 200:
+                _LOGGER.error(
+                    "Error fetching transactions from TrueLayer: %s", transactions.text
+                )
+                yield "Error fetching transactions from TrueLayer: {}".format(
+                    transactions.text
+                )
+                continue
+            if "results" not in transactions.json():
+                _LOGGER.warning("No transactions found in TrueLayer")
+                yield "No transactions found in TrueLayer"
+                continue
+            transactions = transactions.json()["results"]
+            for transaction in transactions:
+                _LOGGER.info("Transaction: %s", transaction)
+                yield "TrueLayer transaction: {}".format(transaction)
+            yield "TrueLayer: A total of {} transaction(s) found".format(
+                len(transactions)
+            )

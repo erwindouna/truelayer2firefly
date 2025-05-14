@@ -254,7 +254,7 @@ class TrueLayerClient:
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
-        await self._extract_info_from_token
+        await self._extract_info_from_token()
 
     async def _extract_info_from_token(self) -> None:
         """Extract information from the access token."""
@@ -270,6 +270,13 @@ class TrueLayerClient:
         """Get the accounts from TrueLayer."""
         return await self._request(
             uri="accounts",
+            method="GET",
+        )
+
+    async def get_transactions(self, account_id: str) -> dict[str, Any]:
+        """Get the transactions from TrueLayer."""
+        return await self._request(
+            uri=f"accounts/{account_id}/transactions",
             method="GET",
         )
 

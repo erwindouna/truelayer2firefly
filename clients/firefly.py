@@ -141,6 +141,41 @@ class FireflyClient:
             method="GET",
         )
 
+    async def get_account_paginated(self) -> dict[str, Any]:
+        """Get the accounts from the Firefly API with pagination."""
+        accounts = []
+        next_page = 1
+
+        while next_page:
+            response = await self._request(
+                uri="accounts",
+                method="GET",
+                params={"page": next_page},
+            )
+
+            if response.status_code != 200:
+                _LOGGER.error("Error fetching accounts from Firefly: %s", response.text)
+                raise TrueLayer2FireflyError(
+                    "Error fetching accounts from Firefly",
+                    {"response": response.text},
+                )
+
+            data = response.json()
+            if "data" not in data:
+                _LOGGER.warning("No accounts found in Firefly")
+                break
+
+            accounts.extend(data["data"])
+
+            # Check for the next page in the pagination metadata
+            pagination = data.get("meta", {}).get("pagination", {})
+            current_page = pagination.get("current_page", 1)
+            total_pages = pagination.get("total_pages", 1)
+
+            next_page = current_page + 1 if current_page < total_pages else None
+
+        return accounts
+
     async def close(self) -> None:
         """Close the HTTPX client session."""
         if self._client:

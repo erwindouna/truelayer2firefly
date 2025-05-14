@@ -147,7 +147,7 @@
                 const source = new EventSource("/import/stream");
 
                 source.onmessage = (event) => {
-                    this.messages.push(event.data);
+                    this.messages.unshift(event.data); // Add new messages to the top of the list
                 };
 
                 source.onerror = (err) => {
