@@ -5,7 +5,7 @@ description = "A connector between TrueLayer and Firefly III"
 authors = ["Erwin Douna <e.douna@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{ include = "truelayer2firefly" }]
+packages = [{ include = "clients" }, { include = "truelayer2firefly" }]
 package-mode = false
 
 [tool.poetry.dependencies]
@@ -25,12 +25,37 @@ python-multipart = "^0.0.20"
 itsdangerous = "^2.2.0"
 pyjwt = "^2.10.1"
 
-
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
-isort = "^5.13.2"
-pytest = "^8.1.1"
-pytest-asyncio = "^0.23.5"
+aresponses = "3.0.0"
+codespell = "2.3.0"
+covdefaults = "2.3.0"
+coverage = {version = "7.8.0", extras = ["toml"]}
+mypy = "1.13.0"
+pre-commit = "4.2.0"
+pre-commit-hooks = "5.0.0"
+pylint = "3.3.7"
+pytest = "8.3.5"
+pytest-asyncio = "0.24.0"
+pytest-cov = "6.1.1"
+ruff = "0.11.9"
+syrupy = "4.9.1"
+yamllint = "1.37.1"
+datamodel-code-generator = ">=0.28.5,<0.31.0"
+respx = "^0.22.0"
+[tool.pytest.ini_options]
+addopts = "--cov"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+log_cli = true
+log_cli_level = "INFO"
+
+[tool.coverage.run]
+plugins = ["covdefaults"]
+source = ["pyportainer"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
 
 [build-system]
 requires = ["poetry-core"]

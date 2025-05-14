@@ -34,22 +34,13 @@ class TrueLayerClient:
         redirect_uri: str | None = None,
     ):
         """Initialize the TrueLayer client"""
-        self._config: Config = Config()
-
         self.client_id: str | None = client_id
-        self.client_id: str | None = client_id or self._config.get(
-            "truelayer_client_id"
-        )
-        self.client_secret: str | None = client_secret or self._config.get(
-            "truelayer_client_secret"
-        )
-        self.redirect_uri: str | None = redirect_uri or self._config.get(
-            "truelayer_redirect_uri"
-        )
-        self.access_token: str | None = self._config.get("truelayer_access_token")
-        self.refresh_token: str | None = self._config.get("truelayer_refresh_token")
+        self.client_secret: str | None = client_secret
+        self.redirect_uri: str | None = redirect_uri
+        self.access_token: str | None = None
 
-        self._request_timeout: float = request_timeout
+        self._config = Config()
+        self._request_timeout = request_timeout
         self._client: httpx.AsyncClient | None = None
 
     @property
@@ -108,6 +99,7 @@ class TrueLayerClient:
 
         await self._refresh_token()
 
+        # Sanitize params and json by removing None values
         if params:
             params = {k: v for k, v in params.items() if v is not None}
         if json:
@@ -138,11 +130,14 @@ class TrueLayerClient:
                     json=json if method == "POST" and not auth else None,
                 )
             response.raise_for_status()
-        except httpx.RequestError as err:
-            msg = f"Request error during {method} {url}: {err}"
-            raise TrueLayer2FireflyConnectionError(msg) from err
         except httpx.HTTPStatusError as err:
             msg = f"HTTP status error during {method} {url}: {err.response.status_code}, {err.response.text}"
+            raise TrueLayer2FireflyConnectionError(msg) from err
+        except httpx.TimeoutException as err:
+            msg = f"Timeout error during {method} {url}: {err}"
+            raise TrueLayer2FireflyTimeoutError(msg) from err
+        except httpx.RequestError as err:
+            msg = f"Request error during {method} {url}: {err}"
             raise TrueLayer2FireflyConnectionError(msg) from err
 
         content_type = response.headers.get("Content-Type", "")
@@ -214,9 +209,6 @@ class TrueLayerClient:
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
-        self.access_token = response["access_token"]
-        self._refresh_token = response["refresh_token"]
-
         await self._extract_info_from_token()
         _LOGGER.info("Access token refreshed successfully")
 
@@ -256,11 +248,9 @@ class TrueLayerClient:
         )
 
         _LOGGER.info("Received access token response: %s", response)
+
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
-
-        self.access_token = response["access_token"]
-        self.refresh_token = response["refresh_token"]
 
         await self._extract_info_from_token
 
@@ -285,7 +275,7 @@ class TrueLayerClient:
         """Close the HTTPX client session."""
         if self._client:
             await self._client.aclose()
-            _LOGGER.info("Closed TrueLayer HTTPX client session")
+            _LOGGER.info("Closed HTTPX client session")
 
     async def __aenter__(self) -> Self:
         """Async enter."""

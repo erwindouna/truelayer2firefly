@@ -30,15 +30,17 @@ class FireflyClient:
     def __init__(
         self,
         request_timeout: float = 10.0,
-        access_token: str | None = None,
         url: str | None = None,
+        access_token: str | None = None,
     ):
         """Initialize the Firefly client"""
-        self.url: str | None = url
-        self.request_timeout: float = request_timeout
-        self.access_token: str | None = access_token
-
         self._config: Config = Config()
+
+        self.url: str | None = self._config.get("firefly_api_url") or url
+        self.access_token: str | None = (
+            self._config.get("firefly_access_token") or access_token
+        )
+
         self._request_timeout: float = request_timeout
         self._client: httpx.AsyncClient | None = None
 
@@ -52,8 +54,11 @@ class FireflyClient:
         json: dict[str, Any] | None = None,
     ) -> Any:
         """Make a request to the Firefly API"""
-        self.access_token = self._config.get("firefly_access_token")
-        self.url = self._config.get("firefly_api_url")
+        if not self.access_token:
+            self.access_token = self._config.get("firefly_access_token")
+
+        if not self.url:
+            self.url = self._config.get("firefly_api_url")
 
         # No refresh mechanism is needed, since the token is valid for 55 years
 
