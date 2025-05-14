@@ -9,7 +9,8 @@
                 <form method="post" action="/firefly/configuration">
                     <div class="mb-3">
                         <label class="form-label">API URL</label>
-                        <input type="url" class="form-control" x-model="url" name="firefly_url" placeholder="http://your-firefly-url:8080" required>
+                        <input type="url" class="form-control" x-model="firefly_url" name="firefly_url"
+                            placeholder="http://your-firefly-url:8080" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Client ID</label>
@@ -18,11 +19,13 @@
                     <button type="submit" class="btn btn-primary">Save</button>
                 </form>
                 <div class="alert alert-info mt-3">
-                    <p>If you don't have one, you must create in your profile under "OAuth". Make sure you remove the checkbox under "Confidential".</p>
+                    <p>If you don't have one, you must create in your profile under "OAuth". Make sure you remove the
+                        checkbox under "Confidential".</p>
                     <p>The callback URL for this installation is:</p>
                     <code>{{ request.base_url }}firefly/callback</code>
-                    <br/><br/>
-                    <p>The URL needs to be the current local URL including the port, followed by <code>/firefly/callback</code>.</p>
+                    <br /><br />
+                    <p>The URL needs to be the current local URL including the port, followed by
+                        <code>/firefly/callback</code>.</p>
                 </div>
             </div>
         </div>
@@ -31,19 +34,23 @@
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">TrueLayer Configuration</div>
-            <div class="card-body" x-data="{ truelayer_client_id: '', truelayer_client_secret: '', truelayer_redirect_uri: '' }">
+            <div class="card-body"
+                x-data="{ truelayer_client_id: '', truelayer_client_secret: '', truelayer_redirect_uri: '' }">
                 <form method="post" action="/truelayer/configuration">
                     <div class="mb-3">
                         <label class="form-label">Client ID</label>
-                        <input type="text" class="form-control" x-model="truelayer_client_id" name="truelayer_client_id" required>
+                        <input type="text" class="form-control" x-model="truelayer_client_id" name="truelayer_client_id"
+                            required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Client Secret</label>
-                        <input type="password" class="form-control" x-model="truelayer_client_secret" name="truelayer_client_secret" required>
+                        <input type="password" class="form-control" x-model="truelayer_client_secret"
+                            name="truelayer_client_secret" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Redirect URI</label>
-                        <input type="text" class="form-control" x-model="truelayer_redirect_uri" name="truelayer_redirect_uri" required>
+                        <input type="text" class="form-control" x-model="truelayer_redirect_uri"
+                            name="truelayer_redirect_uri" required>
                     </div>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </form>
