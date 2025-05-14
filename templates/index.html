@@ -76,8 +76,23 @@
                     <p class="text-muted">Running import... please wait.</p>
                 </template>
 
+                <div class="mt-4" x-show="Object.keys(progressByAccount).length">
+                    <template x-for="(progress, account) in progressByAccount" :key="account">
+                        <div class="mb-3">
+                            <label x-text="'Importing: ' + account"></label>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar"
+                                    :style="`width: ${(progress.current / progress.total * 100).toFixed(0)}%`"
+                                    :aria-valuenow="progress.current" :aria-valuemax="progress.total" aria-valuemin="0"
+                                    x-text="`${progress.current} / ${progress.total}`">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
                 <ul class="list-group mt-3" x-show="messages.length">
-                    <template x-for="msg in messages" :key="msg">
+                    <template x-for="(msg, index) in messages" :key="index">
                         <li class="list-group-item" x-text="msg"></li>
                     </template>
                 </ul>
@@ -139,15 +154,17 @@
         Alpine.data('importProgress', () => ({
             messages: [],
             isRunning: false,
+            progressByAccount: {},
 
             startImport() {
                 this.isRunning = true;
                 this.messages = [];
+                this.progressByAccount = {};
 
                 const source = new EventSource("/import/stream");
 
                 source.onmessage = (event) => {
-                    this.messages.unshift(event.data); // Add new messages to the top of the list
+                    this.messages.unshift(event.data);
                 };
 
                 source.onerror = (err) => {
@@ -156,6 +173,11 @@
                     this.isRunning = false;
                 };
 
+                source.addEventListener("progress", (event) => {
+                    const { account, current, total } = JSON.parse(event.data);
+                    this.progressByAccount[account] = { current, total };
+                });
+
                 source.addEventListener("end", () => {
                     source.close();
                     this.isRunning = false;
@@ -163,6 +185,7 @@
                 });
             }
         }));
+
     });
 </script>
 {% endblock %}

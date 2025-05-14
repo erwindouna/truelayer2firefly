@@ -1,6 +1,7 @@
 import base64
 from collections.abc import AsyncGenerator
 from hashlib import sha256
+import json
 import secrets
 import string
 from fastapi import FastAPI, Form, Request, Depends, params
@@ -330,12 +331,16 @@ async def import_stream(
         """Generate events for the import process."""
         try:
             async for event in importer.start_import():
-                yield f"data: {event}\n\n"
+                if isinstance(event, dict) and event.get("type") == "progress":
+                    yield f"event: progress\ndata: {json.dumps(event['data'])}\n\n"
+                else:
+                    yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
             _LOGGER.error(f"Error during import: {e}")
             yield f"data: Error: {e}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 @app.get("/reset-configuration")
 async def reset_configuration(request: Request):
@@ -343,6 +348,7 @@ async def reset_configuration(request: Request):
     config.reset()
     _LOGGER.info("Configuration reset successfully.")
     return RedirectResponse(str(request.url_for("index")), status_code=302)
+
 
 app.add_exception_handler(
     TrueLayer2FireflyAuthorizationError, truelayer_authorization_error_handler

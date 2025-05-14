@@ -84,13 +84,25 @@ class FireflyClient:
             json = {k: v for k, v in json.items() if v is not None}
 
         try:
-            if method == "POST":
+            if method == "POST" and auth:
                 headers = {"Content-Type": "application/x-www-form-urlencoded"}
                 response = await self._client.request(
                     method=method,
                     url=url,
                     headers=headers,
                     data=params,
+                )
+            elif method == "POST" and not auth:
+                if self._config.get("firefly_access_token"):
+                    headers["Authorization"] = (
+                        f"Bearer {self._config.get('firefly_access_token')}"
+                    )
+                headers["Content-Type"] = "application/json"
+                response = await self._client.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=json,
                 )
             else:
                 if self._config.get("firefly_access_token"):
@@ -175,6 +187,19 @@ class FireflyClient:
             next_page = current_page + 1 if current_page < total_pages else None
 
         return accounts
+
+    async def create_account(
+        self,
+        account_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Create an account in Firefly."""
+        response = await self._request(
+            uri="accounts",
+            method="POST",
+            json=account_data,
+        )
+
+        return response
 
     async def close(self) -> None:
         """Close the HTTPX client session."""

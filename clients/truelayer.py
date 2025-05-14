@@ -34,12 +34,20 @@ class TrueLayerClient:
         redirect_uri: str | None = None,
     ):
         """Initialize the TrueLayer client"""
-        self.client_id: str | None = client_id
-        self.client_secret: str | None = client_secret
-        self.redirect_uri: str | None = redirect_uri
-        self.access_token: str | None = None
-
         self._config = Config()
+        self.client_id: str | None = (
+            self._config.get("truelayer_client_id") or client_id
+        )
+        self.client_secret: str | None = (
+            self._config.get("truelayer_client_secret") or client_secret
+        )
+        self.redirect_uri: str | None = (
+            self._config.get("truelayer_redirect_uri") or redirect_uri
+        )
+        self.access_token: str | None = (
+            self._config.get("truelayer_access_token") or None
+        )
+
         self._request_timeout = request_timeout
         self._client: httpx.AsyncClient | None = None
 
