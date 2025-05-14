@@ -337,6 +337,12 @@ async def import_stream(
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+@app.get("/reset-configuration")
+async def reset_configuration(request: Request):
+    """Reset the configuration."""
+    config.reset()
+    _LOGGER.info("Configuration reset successfully.")
+    return RedirectResponse(str(request.url_for("index")), status_code=302)
 
 app.add_exception_handler(
     TrueLayer2FireflyAuthorizationError, truelayer_authorization_error_handler

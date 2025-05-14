@@ -2,6 +2,37 @@
 
 {% block content %}
 <div class="row">
+    <div class="col-md-12">
+        <h1>Configuration</h1>
+        <p>Configure your Firefly III and TrueLayer settings below.</p>
+        <hr>
+        <p>Need to reset your configuration?</p>
+        <p><button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#resetModal">Reset
+                configuration</button>
+        </p>
+
+        <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="resetModalLabel">Confirm Reset</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to reset the configuration? You will have to reconfigure your
+                        Firefly III and TrueLayer settings.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <a href="/reset-configuration" class="btn btn-danger">Confirm Reset</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">Firefly III Configuration</div>
@@ -25,7 +56,8 @@
                     <code>{{ request.base_url }}firefly/callback</code>
                     <br /><br />
                     <p>The URL needs to be the current local URL including the port, followed by
-                        <code>/firefly/callback</code>.</p>
+                        <code>/firefly/callback</code>.
+                    </p>
                 </div>
             </div>
         </div>

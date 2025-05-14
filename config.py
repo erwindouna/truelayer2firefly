@@ -49,6 +49,12 @@ class Config:
         else:
             _LOGGER.warning("Key %s not found in configuration", key)
 
+    def reset(self) -> None:
+        """Reset the configuration"""
+        _LOGGER.info("Resetting configuration")
+        self._config = {}
+        self._save()
+
     def _save(self) -> None:
         """Save the current configuration to the JSON file"""
         with open(self.path, "w", encoding="utf-8") as f:

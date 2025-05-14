@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}TrueLayer2Firefly{% endblock %}</title>
@@ -11,8 +12,10 @@
     <style>
         #loading-screen {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-color: white;
             display: flex;
             justify-content: center;
@@ -21,6 +24,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="loading-screen">
         <div class="spinner-border text-primary" role="status">
@@ -41,7 +45,8 @@
     </main>
 
     <footer class="bg-light text-center py-3 mt-5">
-        <small>TrueLayer2Firefly importer built by <a href="https://github.com/erwindouna" target="_blank">Erwin Douna</a> | Copyright &copy; 2025</small>
+        <small>TrueLayer2Firefly importer built by <a href="https://github.com/erwindouna" target="_blank">Erwin
+                Douna</a> | Copyright &copy; 2025</small>
     </footer>
     <script>
         window.addEventListener("load", function () {
@@ -51,4 +56,5 @@
     </script>
 
 </body>
+
 </html>
