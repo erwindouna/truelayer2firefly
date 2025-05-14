@@ -133,3 +133,4 @@ setup.py
 examples/example_dev.py
 
 config.json
+/data/config.json

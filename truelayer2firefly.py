@@ -44,20 +44,20 @@ _LOGGER = logging.getLogger(__name__)
 
 logging.getLogger("uvicorn").setLevel(logging.INFO)
 
-config = Config("config.json")
+config = Config()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan event handler to initialize and close API clients."""
-    app.state.truelayer_client = TrueLayerClient(
+    application.state.truelayer_client = TrueLayerClient(
         client_id=config.get("truelayer_client_id"),
         client_secret=config.get("truelayer_client_secret"),
         redirect_uri=config.get("truelayer_redirect_uri"),
     )
     _LOGGER.info("TrueLayer client initialized")
 
-    app.state.firefly_client = FireflyClient(
+    application.state.firefly_client = FireflyClient(
         url=config.get("firefly_api_url"),
         access_token=config.get("firefly_access_token"),
     )
@@ -65,11 +65,11 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    if client := app.state.truelayer_client:
+    if client := application.state.truelayer_client:
         await client.close()
         _LOGGER.info("TrueLayer client closed")
 
-    if client := app.state.firefly_client:
+    if client := application.state.firefly_client:
         await client.close()
         _LOGGER.info("Firefly client closed")
 
@@ -251,7 +251,7 @@ async def truelayer_configuration(
     config.set("truelayer_redirect_uri", truelayer_redirect_uri)
 
     auth_url = await truelayer.get_authorization_url()
-    _LOGGER.info(f"Authorization URL: {auth_url}")
+    _LOGGER.info("Authorization URL: %s", auth_url)
 
     return RedirectResponse(str(auth_url), status_code=302)
 

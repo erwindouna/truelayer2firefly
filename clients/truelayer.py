@@ -249,6 +249,8 @@ class TrueLayerClient:
 
         _LOGGER.info("Received access token response: %s", response)
 
+        response = response.json()
+
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
