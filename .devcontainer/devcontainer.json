@@ -4,7 +4,7 @@
 		"dockerfile": "Dockerfile",
 		"context": ".."
 	},
-	"postCreateCommand": "python3 -m venv .venv && . .venv/bin/activate && poetry install",
+	"postCreateCommand": "python3.13 -m venv .venv && . .venv/bin/activate && poetry install",
 	"customizations": {
 		"codespaces": {
 			"openFiles": [
