@@ -8,8 +8,8 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Firefly III</span>
                 <span class="badge"
-                      :class="firefly.status === 'ok' ? 'bg-success' : (firefly.status === 'fail' ? 'bg-danger' : 'bg-warning')"
-                      x-text="firefly.status === 'ok' ? 'Connected' : (firefly.status === 'fail' ? 'Disconnected' : 'Checking...')">
+                    :class="firefly.status === 'ok' ? 'bg-success' : (firefly.status === 'fail' ? 'bg-danger' : 'bg-warning')"
+                    x-text="firefly.status === 'ok' ? 'Connected' : (firefly.status === 'fail' ? 'Disconnected' : 'Checking...')">
                 </span>
             </div>
             <div class="card-body">
@@ -32,14 +32,13 @@
         </div>
     </div>
 
-    <!-- TrueLayer Status -->
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>TrueLayer</span>
                 <span class="badge"
-                      :class="truelayer.status === 'ok' ? 'bg-success' : (truelayer.status === 'fail' ? 'bg-danger' : 'bg-warning')"
-                      x-text="truelayer.status === 'ok' ? 'Connected' : (truelayer.status === 'fail' ? 'Disconnected' : 'Checking...')">
+                    :class="truelayer.status === 'ok' ? 'bg-success' : (truelayer.status === 'fail' ? 'bg-danger' : 'bg-warning')"
+                    x-text="truelayer.status === 'ok' ? 'Connected' : (truelayer.status === 'fail' ? 'Disconnected' : 'Checking...')">
                 </span>
             </div>
             <div class="card-body">
@@ -62,7 +61,6 @@
         </div>
     </div>
 
-    <!-- Import UI -->
     <div class="col-md-12" x-show="firefly.status === 'ok' && truelayer.status === 'ok'" x-data="importProgress">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -97,10 +95,8 @@
     </template>
 </div>
 
-<!-- Alpine Logic -->
 <script>
     document.addEventListener('alpine:init', () => {
-        // Service status checker
         Alpine.data('statusCheck', () => ({
             firefly: { status: null },
             truelayer: { status: null },
@@ -114,7 +110,7 @@
                     const res = await fetch('/firefly/healthcheck');
                     const data = await res.json();
                     this.firefly.status = (res.ok && data.status === 'OK') ? 'ok' : 'fail';
-                    console.log("Firefly III status:", this.firefly.status);	
+                    console.log("Firefly III status:", this.firefly.status);
                 } catch (err) {
                     this.firefly.status = 'fail';
                     console.error('Error checking Firefly III status:', err);
@@ -134,7 +130,6 @@
             }
         }));
 
-        // Import progress stream
         Alpine.data('importProgress', () => ({
             messages: [],
             isRunning: false,

@@ -34,18 +34,22 @@ class TrueLayerClient:
         redirect_uri: str | None = None,
     ):
         """Initialize the TrueLayer client"""
+        self._config: Config = Config()
+
         self.client_id: str | None = client_id
-        self.client_secret: str | None = client_secret
-        self.redirect_uri: str | None = redirect_uri
-        self.access_token: str | None = None
+        self.client_id: str | None = client_id or self._config.get(
+            "truelayer_client_id"
+        )
+        self.client_secret: str | None = client_secret or self._config.get(
+            "truelayer_client_secret"
+        )
+        self.redirect_uri: str | None = redirect_uri or self._config.get(
+            "truelayer_redirect_uri"
+        )
+        self.access_token: str | None = self._config.get("truelayer_access_token")
+        self.refresh_token: str | None = self._config.get("truelayer_refresh_token")
 
-        if not self.client_id or not self.client_secret or not self.redirect_uri:
-            _LOGGER.info(
-                "TrueLayer client ID, secret, or redirect URI not set. They probably need to be set first."
-            )
-
-        self._config = Config()
-        self._request_timeout = request_timeout
+        self._request_timeout: float = request_timeout
         self._client: httpx.AsyncClient | None = None
 
     @property
@@ -83,6 +87,7 @@ class TrueLayerClient:
         self.client_id = self._config.get("truelayer_client_id")
         self.client_secret = self._config.get("truelayer_client_secret")
         self.redirect_uri = self._config.get("truelayer_redirect_uri")
+        self.refresh
 
         if auth:
             url = str(URL("https://auth.truelayer.com").join(URL(uri)))
@@ -104,7 +109,6 @@ class TrueLayerClient:
 
         await self._refresh_token()
 
-        # Sanitize params and json by removing None values
         if params:
             params = {k: v for k, v in params.items() if v is not None}
         if json:
@@ -211,6 +215,9 @@ class TrueLayerClient:
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
+        self.access_token = response["access_token"]
+        self._refresh_token = response["refresh_token"]
+
         await self._extract_info_from_token()
         _LOGGER.info("Access token refreshed successfully")
 
@@ -250,9 +257,11 @@ class TrueLayerClient:
         )
 
         _LOGGER.info("Received access token response: %s", response)
-
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
+
+        self.access_token = response["access_token"]
+        self.refresh_token = response["refresh_token"]
 
         await self._extract_info_from_token
 

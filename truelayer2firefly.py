@@ -78,14 +78,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(255))
 
 
 async def get_truelayer_client() -> TrueLayerClient:
+    """Get the TrueLayer client from the application state."""
     client = app.state.truelayer_client
     if not client:
         raise RuntimeError("TrueLayer client is not initialized.")
+    return client
+
+
+async def get_firefly_client() -> FireflyClient:
+    """Get the Firefly client from the application state."""
+    client = app.state.firefly_client
+    if not client:
+        raise RuntimeError("Firefly client is not initialized.")
     return client
 
 
@@ -128,7 +136,12 @@ async def firefly_configuration(
     session["form_client_id"] = firefly_client_id
     session["form_base_url"] = firefly_url
 
-    redirect_uri = str(request.url_for("firefly/callback"))
+    # Dynamically construct the redirect URI, useful for reverse proxies
+    host = request.headers.get("X-Forwarded-Host", request.headers.get("Host"))
+    scheme = request.headers.get("X-Forwarded-Proto", "http")
+    redirect_uri = f"{scheme}://{host}/firefly/callback"
+    session["redirect_uri"] = redirect_uri
+
     query_params = {
         "client_id": firefly_client_id,
         "redirect_uri": redirect_uri,
@@ -146,13 +159,15 @@ async def firefly_configuration(
     )
 
     _LOGGER.info("Query parameters are %s", query_params)
-    _LOGGER.info(f"Now redirecting to {auth_url.with_query(None)} (params omitted)")
+    _LOGGER.info(f"Now redirecting to {auth_url}")
 
     return RedirectResponse(str(auth_url), status_code=302)
 
 
 @app.get("/firefly/callback", name="firefly/callback")
-async def firefly_callback(request: Request):
+async def firefly_callback(
+    request: Request, firefly: FireflyClient = Depends(FireflyClient)
+):
     """Handle the callback from Firefly."""
     code = request.query_params.get("code")
     state = request.query_params.get("state")
@@ -161,7 +176,7 @@ async def firefly_callback(request: Request):
     stored_state = session.get("state")
     stored_code_verifier = session.get("code_verifier")
     form_client_id = session.get("form_client_id")
-    form_base_url = session.get("form_base_url")
+    redirect_uri = session.get("redirect_uri")
 
     if state != stored_state:
         _LOGGER.error("State mismatch: %s != %s", state, stored_state)
@@ -170,14 +185,15 @@ async def firefly_callback(request: Request):
     params = {
         "grant_type": "authorization_code",
         "client_id": form_client_id,
-        "redirect_uri": str(request.url_for("firefly/callback")),
+        "redirect_uri": redirect_uri,
         "code": code,
         "code_verifier": stored_code_verifier,
     }
 
-    response = await FireflyClient(url=form_base_url)._request(
-        uri="/oauth/token",
+    response = await firefly._request(
+        uri="oauth/token",
         method="POST",
+        auth=True,
         params=params,
     )
 

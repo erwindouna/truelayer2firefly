@@ -11,18 +11,20 @@ RUN apt-get update && apt-get install -y \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
 WORKDIR /app
 
-# Copy and install dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-interaction --no-ansi --only main
 
-# Copy the entire app (including static frontend files)
 COPY . .
 
-# Expose port
+# TODO: check this later, since it will change
 EXPOSE 8000
 
 # Run the app
+# TODO: work on this later, to make it more flexible
 CMD ["poetry", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
