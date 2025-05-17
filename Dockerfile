@@ -2,7 +2,7 @@ FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV POETRY_VERSION=1.8.2
+ENV POETRY_VERSION=2.1.3
 ENV PATH="/root/.local/bin:$PATH"
 
 # Install system dependencies and Poetry
