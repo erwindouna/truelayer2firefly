@@ -9,7 +9,6 @@ import humanize
 import json
 
 import httpx
-from pytest import param
 from yarl import URL
 import jwt
 from config import Config
