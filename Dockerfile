@@ -11,22 +11,20 @@ RUN apt-get update && apt-get install -y \
     && curl -sSL https://install.python-poetry.org | python3 - \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+
+#RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+#    && apt-get install -y nodejs
+
 WORKDIR /app
 
-# Copy dependency files
 COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-interaction --no-ansi --only main
 
-# Install only main dependencies and clean Poetry/pip cache
-RUN poetry install --no-interaction --no-ansi --only main \
-    && poetry cache clear pypi --all --no-interaction \
-    && poetry cache clear packages --all --no-interaction \
-    && rm -rf /root/.cache /root/.local/share/pypoetry
-
-# Copy rest of the app
 COPY . .
 
-# Expose app port
+# TODO: check this later, since it will change
 EXPOSE 3000
 
 # Run the app
+# TODO: work on this later, to make it more flexible
 CMD ["poetry", "run", "uvicorn", "truelayer2firefly:app", "--host", "0.0.0.0", "--port", "3000"]
