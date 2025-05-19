@@ -261,6 +261,8 @@ class TrueLayerClient:
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
+        self.access_token = response["access_token"]
+
         await self._extract_info_from_token()
 
     async def _extract_info_from_token(self) -> None:
