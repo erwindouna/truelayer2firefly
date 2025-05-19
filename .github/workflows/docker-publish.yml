@@ -33,4 +33,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.actor }}/truelayer2firefly:latest
+          tags: |
+            ghcr.io/${{ github.actor }}/truelayer2firefly:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/truelayer2firefly:latest
