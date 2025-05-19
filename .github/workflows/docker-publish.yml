@@ -22,9 +22,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build original Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: ghcr.io/${{ github.actor }}/truelayer2firefly:latest
+
+      - name: Install DockerSlim
+        run: |
+          curl -sL https://raw.githubusercontent.com/docker-slim/docker-slim/master/scripts/install-docker-slim.sh | sudo bash
+
+      - name: Slim the Docker image
+        run: |
+          docker-slim build \
+            --target ghcr.io/${{ github.actor }}/truelayer2firefly:latest \
+            --tag ghcr.io/${{ github.actor }}/truelayer2firefly:slim \
+            --http-probe=false
+
+      - name: Push slimmed image
+        run: |
+          docker push ghcr.io/${{ github.actor }}/truelayer2firefly:slim
