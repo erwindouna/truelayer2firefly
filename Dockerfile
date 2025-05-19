@@ -18,7 +18,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-interaction --no-ansi --only main
+RUN poetry install --no-interaction --no-ansi --only main \
+    && poetry cache clear . --all \
+    && rm -rf /root/.cache /root/.local/share/pypoetry
 
 COPY . .
 
