@@ -14,7 +14,7 @@
 Ultrafast and lightweight appliacation to synchornize your TrueLayer transactions to Firefly III
 
 >[!NOTE]
->This project is in an experimental stage. Feelf ree to use it, but be aware that it may not be fully stable or feature-complete. Your feedback and contributions are welcome as we work towards a more polished release. Raise an [issue](https://github.com/erwindounaner/truelayer2firefly/issues) if you run into any problems or have suggestions for improvements. Thank you for your understanding and support!
+>This project is in an experimental stage. Feel f ree to use it, but be aware that it may not be fully stable or feature-complete. Your feedback and contributions are welcome as work is done towards a more polished release. Raise an [issue](https://github.com/erwindounaner/truelayer2firefly/issues) if you run into any problems or have suggestions for improvements. Thank you for your understanding and support!
 
 
 This is an asynchronous Python application for to synchronize your transactions to [Firefly III](https://firefly-iii.org/), via the [TrueLayer](https://www.truelayer.com/) financial services platform.
