@@ -163,8 +163,8 @@ SOFTWARE.
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[build-shield]: https://github.com/erwindouna/truelayer2firefly/actions/workflows/docker-publish.yaml
-[build-url]: https://github.com/erwindouna/truelayer2firefly/actions/workflows/docker-publish.yaml
+[build-shield]: https://github.com/erwindouna/truelayer2firefly/actions/workflows/docker-publish.yml
+[build-url]: https://github.com/erwindouna/truelayer2firefly/actions/workflows/docker-publish.yml
 [codecov-shield]: https://codecov.io/gh/erwindouna/truelayer2firefly/branch/main/graph/badge.svg?token=TOKEN
 [codecov-url]: https://codecov.io/gh/erwindouna/truelayer2firefly
 [commits-shield]: https://img.shields.io/github/commit-activity/y/erwindouna/truelayer2firefly.svg
