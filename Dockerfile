@@ -18,7 +18,8 @@ COPY pyproject.toml poetry.lock ./
 
 # Install only main dependencies and clean Poetry/pip cache
 RUN poetry install --no-interaction --no-ansi --only main \
-    && poetry cache clear . --all \
+    && poetry cache clear pypi --all --no-interaction \
+    && poetry cache clear packages --all --no-interaction \
     && rm -rf /root/.cache /root/.local/share/pypoetry
 
 # Copy rest of the app
