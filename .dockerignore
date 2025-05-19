@@ -1,0 +1,82 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Poetry lock file (optional, if generated dynamically)
+# poetry.lock
+
+# Test and coverage files
+.coverage
+.tox/
+nosetests.xml
+test-reports/
+tests/__pycache__/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.cache
+.pytest_cache/
+
+# Logs
+*.log
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*~
+
+# Docker-specific
+Dockerfile*
+docker-compose*.yml
+
+# Node (if you're bundling a frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+*.tsbuildinfo
+
+# Secrets (just in case)
+.env
+.env.*
+data/config.json
