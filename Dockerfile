@@ -1,32 +1,39 @@
-FROM python:3.13-slim
+# Stage 1: Builder
+FROM python:3.13-slim AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV POETRY_VERSION=2.1.3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    libssl-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+ENV POETRY_VERSION=1.8.2
 ENV PATH="/root/.local/bin:$PATH"
-
-# Install system dependencies and Poetry
-RUN apt-get update && apt-get install -y \
-    curl build-essential git libssl-dev \
-    && curl -sSL https://install.python-poetry.org | python3 - \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-
-#RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-#    && apt-get install -y nodejs
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-interaction --no-ansi --only main \
-    && poetry cache clear . --all \
-    && rm -rf /root/.cache /root/.local/share/pypoetry
+
+RUN poetry config virtualenvs.in-project true \
+    && poetry install --no-dev --no-interaction --no-ansi \
+    && rm -rf /root/.cache
 
 COPY . .
 
-# TODO: check this later, since it will change
+# Stage 2: Final Image
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY --from=builder /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Expose port (update if needed)
 EXPOSE 3000
 
-# Run the app
-# TODO: work on this later, to make it more flexible
-CMD ["poetry", "run", "uvicorn", "truelayer2firefly:app", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["uvicorn", "truelayer2firefly:app", "--host", "0.0.0.0", "--port", "3000"]
