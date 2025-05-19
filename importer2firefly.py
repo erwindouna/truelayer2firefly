@@ -207,7 +207,7 @@ class Import2Firefly:
                         "total": total_transactions,
                     },
                 }
-                await asyncio.sleep(0.001)
+                await asyncio.sleep(0.05)
 
             yield f"Report: {matching} matching and {unmatching} unmatching and {newly_created} newly created accounts(s)"
             await asyncio.sleep(0)

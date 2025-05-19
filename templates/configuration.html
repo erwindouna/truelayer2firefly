@@ -50,13 +50,15 @@
                     <button type="submit" class="btn btn-primary">Save</button>
                 </form>
                 <div class="alert alert-info mt-3">
-                    <p>If you don't have one, you must create in your profile under "OAuth". Make sure you remove the
-                        checkbox under "Confidential".</p>
-                    <p>The callback URL for this installation is:</p>
+                    <p>If you don't have one, you must create in your profile under <strong>OAuth</strong>. Make sure
+                        you remove the checkbox under <strong>Confidential</strong>.</p>
+                    <p>The Firefly III callback URL for this installation is:</p>
                     <code>{{ request.base_url }}firefly/callback</code>
                     <br /><br />
-                    <p>The URL needs to be the current local URL including the port, followed by
-                        <code>/firefly/callback</code>.
+                    <p>
+                        <small>The URL needs to be the current local URL including the port, followed by
+                            <code>/firefly/callback</code>.
+                        </small>
                     </p>
                 </div>
             </div>
@@ -86,6 +88,20 @@
                     </div>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </form>
+                <div class="alert alert-info mt-3">
+                    <p>The redirect URI needs to be configured within TrueLayer. Goto <strong>Apps</strong> ->
+                        <strong>Settings</strong> to configure your redirect URI.
+                    </p>
+                    <p>The TrueLayer callback URL for this installation is:</p>
+                    <code>{{ request.base_url }}truelayer/callback</code>
+                    <br /><br />
+                    <p>
+                        <small>
+                            The URL needs to be the current local URL including the port, followed by
+                            <code>/truelayer/callback</code>.
+                        </small>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
