@@ -1,19 +1,20 @@
-name: Publish Docker image
+name: Publish Slimmed Docker Image
 
 on:
   release:
-    types: [published]  
+    types: [published]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-slim:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -22,25 +23,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build original Docker image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          push: false
           tags: ghcr.io/${{ github.actor }}/truelayer2firefly:latest
 
-      - name: Install DockerSlim
-        run: |
-          curl -sL https://github.com/slimtoolkit/slim/releases/latest/download/dist_linux.tar.gz | tar -xz
-          sudo mv dist_linux/docker-slim /usr/local/bin/docker-slim
-
       - name: Slim the Docker image
-        run: |
-          docker-slim build \
-            --target ghcr.io/${{ github.actor }}/truelayer2firefly:latest \
-            --tag ghcr.io/${{ github.actor }}/truelayer2firefly:slim \
-            --http-probe=false
+        uses: kitabisa/docker-slim-action@v1
+        env:
+          DSLIM_HTTP_PROBE: false
+        with:
+          target: ghcr.io/${{ github.actor }}/truelayer2firefly:latest
+          tag: slim
 
       - name: Push slimmed image
         run: |
+          docker tag ghcr.io/${{ github.actor }}/truelayer2firefly:slim ghcr.io/${{ github.actor }}/truelayer2firefly:slim
           docker push ghcr.io/${{ github.actor }}/truelayer2firefly:slim
