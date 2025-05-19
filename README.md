@@ -30,7 +30,7 @@ You can install the application via Docker Compose or via the Docker command:
 ```dockerfile
 services:
   truelayer2firefly:
-    image: ghcr.io/erwindouna/truelayer2firefly:latest
+    iimage: erwind/truelayer2firefly:latest
     container_name: truelayer2firefly
     ports:
       - "3000:3000" # Update this to your desired port
@@ -44,7 +44,7 @@ docker run -d \
   --name truelayer2firefly \
   -p 3000:3000 \
   -v /YOUR_MOUNT:/app/data \
-  ghcr.io/erwindouna/truelayer2firefly:latest
+  erwind/truelayer2firefly:latest
 ```
 
 ## Configuration
@@ -163,7 +163,7 @@ SOFTWARE.
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[build-shield]: https://github.com/erwindouna/truelayer2firefly/actions/workflows/docker-publish.yaml/badge.svg
+[build-shield]: https://github.com/erwindouna/truelayer2firefly/actions/workflows/docker-publish.yaml
 [build-url]: https://github.com/erwindouna/truelayer2firefly/actions/workflows/docker-publish.yaml
 [codecov-shield]: https://codecov.io/gh/erwindouna/truelayer2firefly/branch/main/graph/badge.svg?token=TOKEN
 [codecov-url]: https://codecov.io/gh/erwindouna/truelayer2firefly
