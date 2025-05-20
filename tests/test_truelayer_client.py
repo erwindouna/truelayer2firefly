@@ -1,12 +1,11 @@
 """Basic tests for Truelayer2Firefly."""
 
-import asyncio
 from unittest.mock import patch
 
 import httpx
 import pytest
-from aiohttp import ClientError, ClientResponse, ClientSession
-from aresponses import Response, ResponsesMockServer
+from aiohttp import ClientError, ClientSession
+from aresponses import ResponsesMockServer
 import respx
 
 from clients.truelayer import TrueLayerClient

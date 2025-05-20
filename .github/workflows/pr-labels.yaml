@@ -1,6 +1,6 @@
 ---
     name: PR Labels
-    
+
     # yamllint disable-line rule:truthy
     on:
       pull_request_target:
@@ -10,7 +10,7 @@
           - unlabeled
           - synchronize
       workflow_call:
-    
+
     jobs:
       validate:
         name: Verify

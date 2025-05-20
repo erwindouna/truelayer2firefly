@@ -4,14 +4,13 @@ from hashlib import sha256
 import json
 import secrets
 import string
-from fastapi import FastAPI, Form, Request, Depends, params
+from fastapi import FastAPI, Form, Request, Depends
 from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
     RedirectResponse,
     StreamingResponse,
 )
-from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import HTTPException
 from fastapi.templating import Jinja2Templates
 from yarl import URL

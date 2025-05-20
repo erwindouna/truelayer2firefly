@@ -1,12 +1,12 @@
 ---
     name: Lock
-    
+
     # yamllint disable-line rule:truthy
     on:
       schedule:
         - cron: "0 3 * * *"
       workflow_dispatch:
-    
+
     jobs:
       inactivity-lock:
         name: Lock issues and PRs
