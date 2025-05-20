@@ -1,6 +1,6 @@
 ---
     name: Sync labels
-    
+
     # yamllint disable-line rule:truthy
     on:
       push:
@@ -9,7 +9,7 @@
         paths:
           - .github/labels.yml
       workflow_dispatch:
-    
+
     jobs:
       labels:
         name: ♻️ Sync labels

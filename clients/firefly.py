@@ -1,23 +1,15 @@
 """Class to handle TrueLayer API calls."""
 
-from datetime import datetime
 import logging
-import os
-import re
-import time
 from typing import Any, Self
-import humanize
-import json
 
 import httpx
 from yarl import URL
-import jwt
 from config import Config
 
 from exceptions import (
     TrueLayer2FireflyConnectionError,
     TrueLayer2FireflyError,
-    TrueLayer2FireflyTimeoutError,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -61,6 +53,7 @@ class FireflyClient:
 
         # No refresh mechanism is needed, since the token is valid for 55 years
 
+        assert self.url, "Firefly API URL is not set"
         if auth:
             url = str(URL(self.url).join(URL(uri)))
         else:

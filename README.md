@@ -11,7 +11,7 @@
 [![Build Status][build-shield]][build-url]
 
 
-Ultrafast and lightweight appliacation to synchornize your TrueLayer transactions to Firefly III
+Ultrafast and lightweight application to synchornize your TrueLayer transactions to Firefly III
 
 >[!NOTE]
 >This project is in an experimental stage. Feel free to use it, but be aware that it may not be fully stable or feature-complete. Your feedback and contributions are welcome as work is done towards a more polished release. Raise an [issue](https://github.com/erwindounaner/truelayer2firefly/issues) if you run into any problems or have suggestions for improvements. Thank you for your understanding and support!

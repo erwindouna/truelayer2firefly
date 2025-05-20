@@ -1,8 +1,9 @@
+---
 services:
   truelayer2firefly:
     image: ghcr.io/erwindouna/truelayer2firefly:latest
     container_name: truelayer2firefly
     ports:
-      - "3000:3000" # Update this to your desired port
+      - "3000:3000"  # Update this to your desired port
     volumes:
-      - /YOUR_MOUNT:/app/data # Update this to your mount point
+      - /YOUR_MOUNT:/app/dat  # Update this to your mount point
