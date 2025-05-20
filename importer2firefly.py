@@ -172,11 +172,17 @@ class Import2Firefly:
                                 else "withdrawal"
                             ),
                             "destination_id": (
-                                4
+                                None if linked_account is None else linked_account["id"]
+                            ),
+                            "destination_name": (
+                                "(unknown revenue account)"
                                 if linked_account is None
-                                else linked_account[
-                                    "id"
-                                ]  # TODO: find the unknown destination account
+                                and transaction_type == "deposit"
+                                else (
+                                    "(unknown destination account)"
+                                    if linked_account is None
+                                    else linked_account["attributes"]["name"]
+                                )
                             ),
                             "source_id": import_account["id"],
                             "source_name": import_account["attributes"]["name"],
