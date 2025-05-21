@@ -33,6 +33,32 @@
 </div>
 
 <div class="row">
+    <div class="col-md-12">
+        <h3>Scheduler</h3>
+        <p>Set a scheduler to automatically import your transactions.</p>
+        <hr>
+        <form action="/set-schedule" method="post">
+            <div class="mb-3">
+                <label for="schedule" class="form-label">Scheduler</label>
+                <select class="form-select" id="schedule" name="schedule">
+                    <option value="">Disabled</option>
+                    <option value="*/1 * * * *">Every minute</option>
+                    <option value="*/5 * * * *">Every 5 minutes</option>
+                    <option value="*/10 * * * *">Every 10 minutes</option>
+                    <option value="*/15 * * * *">Every 15 minutes</option>
+                    <option value="*/30 * * * *">Every 30 minutes</option>
+                    <option value="0 * * * *">Every hour</option>
+                    <option value="0 0 * * *">Every day at midnight</option>
+                    <option value="0 0 * * 0">Every week at midnight</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Scheduler</button>
+        </form>
+    </div>
+</div>
+<hr>
+
+<div class="row">
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header">Firefly III Configuration</div>

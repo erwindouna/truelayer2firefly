@@ -35,8 +35,7 @@ class Scheduler:
         _LOGGER.info("Starting the scheduler, with schedule: %s", self._schedule)
         if self._schedule is None:
             _LOGGER.warning("No schedule set, not starting the scheduler")
-            self._schedule = "*/1 * * * *"  # TODO: for debugging purposes
-            # return
+            return
 
         if self._import_job:
             self._scheduler.remove_job(self._import_job.id)
@@ -61,6 +60,28 @@ class Scheduler:
         )
         self._scheduler.start()
         _LOGGER.info("Scheduler started")
+
+    def set_schedule(self, schedule: str) -> None:
+        """Set the schedule for the import job."""
+        self._schedule = schedule
+        _LOGGER.info("Scheduler schedule set to: %s", self._schedule)
+
+        if not schedule:
+            _LOGGER.info("Disabling the scheduler")
+            if self._import_job:
+                self._scheduler.remove_job(self._import_job.id)
+                _LOGGER.info("Scheduler job removed")
+            else:
+                _LOGGER.warning("No import job to remove")
+            self._import_job = None
+            return
+
+        if self._import_job:
+            self._scheduler.reschedule_job(
+                self._import_job.id,
+                trigger=CronTrigger.from_crontab(self._schedule),
+            )
+            _LOGGER.info("Scheduler job rescheduled to: %s", self._schedule)
 
     def stop(self) -> None:
         """Stop the scheduler."""

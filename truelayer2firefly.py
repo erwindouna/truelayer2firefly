@@ -113,6 +113,14 @@ async def get_firefly_client() -> FireflyClient:
     return client
 
 
+async def get_scheduler() -> Scheduler:
+    """Get the scheduler from the application state."""
+    scheduler = app.state.scheduler
+    if not scheduler:
+        raise RuntimeError("Scheduler is not initialized.")
+    return scheduler
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Render the index page."""
@@ -362,6 +370,27 @@ async def reset_configuration(request: Request):
     """Reset the configuration."""
     config.reset()
     _LOGGER.info("Configuration reset successfully.")
+    return RedirectResponse(str(request.url_for("index")), status_code=302)
+
+
+@app.post("/set-schedule")
+async def set_schedule(
+    request: Request,
+    schedule: str = Form(...),
+    scheduler: Scheduler = Depends(get_scheduler),
+) -> RedirectResponse:
+    """Set the import schedule."""
+    _LOGGER.info("Setting schedule to %s", schedule)
+    config.set("import_schedule", schedule)
+
+    try:
+        scheduler.set_schedule(schedule)
+    except Exception as e:
+        _LOGGER.error("Error setting schedule: %s", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Error setting schedule", "details": str(e)},
+        )
     return RedirectResponse(str(request.url_for("index")), status_code=302)
 
 
