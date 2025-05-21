@@ -1,0 +1,19 @@
+site_name: TrueLayer2Firefly
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: blue
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.expand
+    - navigation.sections
+    - navigation.instant
+    - navigation.tracking
+    - navigation.search.highlight
+    - navigation.search.suggest
+    - navigation.search.share
+    - navigation.search.highlight
+    - navigation.search.suggest
+    - navigation.search.share
