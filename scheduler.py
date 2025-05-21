@@ -81,6 +81,10 @@ class Scheduler:
                 self._import_job.id,
                 trigger=CronTrigger.from_crontab(self._schedule),
             )
+
+            if not self._scheduler.running:
+                _LOGGER.info("Scheduler is not running, starting it")
+                self._scheduler.start()
             _LOGGER.info("Scheduler job rescheduled to: %s", self._schedule)
 
     def stop(self) -> None:
