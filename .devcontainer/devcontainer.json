@@ -5,6 +5,7 @@
 		"context": ".."
 	},
 	"postCreateCommand": "python3.13 -m venv .venv && . .venv/bin/activate && poetry install",
+	"updateContentCommand": "python3.13 -m venv .venv && . .venv/bin/activate && poetry install",
 	"customizations": {
 		"codespaces": {
 			"openFiles": [

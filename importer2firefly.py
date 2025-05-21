@@ -18,11 +18,11 @@ _LOGGER = logging.getLogger(__name__)
 class Import2Firefly:
     """Class to handle the import workflow."""
 
-    def __init__(self, truelayer: TrueLayerClient, firefly: FireflyClient) -> None:
+    def __init__(self) -> None:
         """Initialize the Import class."""
         self._config: Config = Config()
-        self._truelayer_client = truelayer
-        self._firefly_client = firefly
+        self._truelayer_client: TrueLayerClient = TrueLayerClient()
+        self._firefly_client: FireflyClient = FireflyClient()
 
         self.start_time = datetime.now()
         self.end_time = None

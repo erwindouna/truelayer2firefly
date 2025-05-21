@@ -4,7 +4,6 @@ from datetime import datetime
 import logging
 import time
 from typing import Any, Self
-from fastapi import Response
 import humanize
 
 import httpx
@@ -15,6 +14,7 @@ from config import Config
 from exceptions import (
     TrueLayer2FireflyConnectionError,
     TrueLayer2FireflyError,
+    TrueLayer2FireflyTimeoutError,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,12 +31,20 @@ class TrueLayerClient:
         redirect_uri: str | None = None,
     ):
         """Initialize the TrueLayer client"""
-        self.client_id: str | None = client_id
-        self.client_secret: str | None = client_secret
-        self.redirect_uri: str | None = redirect_uri
-        self.access_token: str | None = None
-
         self._config = Config()
+        self.client_id: str | None = (
+            self._config.get("truelayer_client_id") or client_id
+        )
+        self.client_secret: str | None = (
+            self._config.get("truelayer_client_secret") or client_secret
+        )
+        self.redirect_uri: str | None = (
+            self._config.get("truelayer_redirect_uri") or redirect_uri
+        )
+        self.access_token: str | None = (
+            self._config.get("truelayer_access_token") or None
+        )
+
         self._request_timeout = request_timeout
         self._client: httpx.AsyncClient | None = None
 
@@ -50,6 +58,16 @@ class TrueLayerClient:
             datetime.fromtimestamp(self._config.get("truelayer_expiration_date"))
             - datetime.now()
         )
+
+    @property
+    def import_accounts(self) -> list[dict[str, str]]:
+        """Get the import accounts"""
+        return self._import_accounts
+
+    @property
+    def import_transactions(self) -> list[dict[str, str]]:
+        """Get the import transactions"""
+        return self._import_transactions
 
     async def _request(
         self,
@@ -117,11 +135,14 @@ class TrueLayerClient:
                     json=json if method == "POST" and not auth else None,
                 )
             response.raise_for_status()
-        except httpx.RequestError as err:
-            msg = f"Request error during {method} {url}: {err}"
-            raise TrueLayer2FireflyConnectionError(msg) from err
         except httpx.HTTPStatusError as err:
             msg = f"HTTP status error during {method} {url}: {err.response.status_code}, {err.response.text}"
+            raise TrueLayer2FireflyConnectionError(msg) from err
+        except httpx.TimeoutException as err:
+            msg = f"Timeout error during {method} {url}: {err}"
+            raise TrueLayer2FireflyTimeoutError(msg) from err
+        except httpx.RequestError as err:
+            msg = f"Request error during {method} {url}: {err}"
             raise TrueLayer2FireflyConnectionError(msg) from err
 
         content_type = response.headers.get("Content-Type", "")
@@ -193,6 +214,8 @@ class TrueLayerClient:
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
 
+        self.access_token = response["access_token"]
+
         await self._extract_info_from_token()
         _LOGGER.info("Access token refreshed successfully")
 
@@ -233,8 +256,12 @@ class TrueLayerClient:
 
         _LOGGER.info("Received access token response: %s", response)
 
+        response = response.json()
+
         self._config.set("truelayer_access_token", response["access_token"])
         self._config.set("truelayer_refresh_token", response["refresh_token"])
+
+        self.access_token = response["access_token"]
 
         await self._extract_info_from_token()
 
@@ -248,10 +275,17 @@ class TrueLayerClient:
         self._config.set("truelayer_credentials_id", decoded["sub"])
         self._config.set("truelayer_expiration_date", decoded["exp"])
 
-    async def get_accounts(self) -> Response:
+    async def get_accounts(self) -> dict[str, Any]:
         """Get the accounts from TrueLayer."""
         return await self._request(
             uri="accounts",
+            method="GET",
+        )
+
+    async def get_transactions(self, account_id: str) -> dict[str, Any]:
+        """Get the transactions from TrueLayer."""
+        return await self._request(
+            uri=f"accounts/{account_id}/transactions",
             method="GET",
         )
 

@@ -70,9 +70,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     application.state.scheduler = Scheduler()
     _LOGGER.info("Scheduler initialized")
 
-    application.state.scheduler.start(
-        application.state.truelayer_client, application.state.firefly_client
-    )
+    application.state.scheduler.start()
     _LOGGER.info("Scheduling started")
 
     yield
@@ -340,15 +338,11 @@ async def truelayer_healthcheck(
 
 
 @app.get("/import/stream")
-async def import_stream(
-    request: Request,
-    truelayer: TrueLayerClient = Depends(get_truelayer_client),
-    firefly: FireflyClient = Depends(FireflyClient),
-) -> StreamingResponse:
+async def import_stream() -> StreamingResponse:
     """Stream the import process."""
     _LOGGER.info("Starting import process")
 
-    importer = Import2Firefly(truelayer, firefly)
+    importer = Import2Firefly()
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate events for the import process."""

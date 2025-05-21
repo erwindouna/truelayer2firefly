@@ -28,9 +28,7 @@ class Scheduler:
         self._import_job = None
         self._schedule: str | None = schedule or self._config.get("import_schedule")
 
-    def start(
-        self, truelayer_client: TrueLayerClient, firefly_client: FireflyClient
-    ) -> None:
+    def start(self) -> None:
         """Start the scheduler."""
         _LOGGER.info("Starting the scheduler, with schedule: %s", self._schedule)
         if self._schedule is None:
@@ -42,11 +40,11 @@ class Scheduler:
 
         loop = asyncio.get_event_loop()
 
-        def run_import() -> None:
+        async def run_import() -> None:
             """Run the import job."""
             start_time = datetime.now()
             _LOGGER.info("Running import job, started at %s", start_time)
-            importer = Import2Firefly(truelayer_client, firefly_client)
+            importer = Import2Firefly()
 
             async def consume_import():
                 try:
@@ -65,6 +63,8 @@ class Scheduler:
             trigger=CronTrigger.from_crontab(self._schedule),
             id="import_job",
             replace_existing=True,
+            misfire_grace_time=30,
+            coalesce=True,
         )
         self._scheduler.start()
         _LOGGER.info("Scheduler started")
@@ -89,11 +89,11 @@ class Scheduler:
                 self._import_job.id,
                 trigger=CronTrigger.from_crontab(self._schedule),
             )
-
-            if not self._scheduler.running:
-                _LOGGER.info("Scheduler is not running, starting it")
-                self._scheduler.start()
             _LOGGER.info("Scheduler job rescheduled to: %s", self._schedule)
+
+        if not self._scheduler.running:
+            _LOGGER.info("Scheduler is not running, starting it")
+            self.start()
 
     def stop(self) -> None:
         """Stop the scheduler."""
