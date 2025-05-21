@@ -47,7 +47,15 @@ class Scheduler:
             start_time = datetime.now()
             _LOGGER.info("Running import job, started at %s", start_time)
             importer = Import2Firefly(truelayer_client, firefly_client)
-            asyncio.run_coroutine_threadsafe(importer.start_import().__anext__(), loop)
+
+            async def consume_import():
+                try:
+                    async for event in importer.start_import():
+                        _LOGGER.info(f"Import event: {event}")
+                except Exception as e:
+                    _LOGGER.error(f"Error during import: {e}")
+
+            asyncio.run_coroutine_threadsafe(consume_import(), loop)
             end_time = datetime.now()
             elapsed_time = end_time - start_time
             _LOGGER.info("Import job completed elapsed time: %s", elapsed_time)
