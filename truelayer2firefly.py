@@ -17,9 +17,13 @@ from yarl import URL
 import logging
 from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+
 
 from clients.firefly import FireflyClient
 from clients.truelayer import TrueLayerClient
+from scheduler import Scheduler
 from config import Config
 from exception_handlers import (
     truelayer_authorization_error_handler,
@@ -63,6 +67,14 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     )
     _LOGGER.info("Firefly client initialized")
 
+    application.state.scheduler = Scheduler()
+    _LOGGER.info("Scheduler initialized")
+
+    application.state.scheduler.start(
+        application.state.truelayer_client, application.state.firefly_client
+    )
+    _LOGGER.info("Scheduling started")
+
     yield
 
     if client := application.state.truelayer_client:
@@ -72,6 +84,10 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     if client := application.state.firefly_client:
         await client.close()
         _LOGGER.info("Firefly client closed")
+
+    if scheduler := application.state.scheduler:
+        scheduler.stop()
+        _LOGGER.info("Scheduler stopped")
 
     _LOGGER.info("Application shutdown complete")
 
@@ -95,6 +111,14 @@ async def get_firefly_client() -> FireflyClient:
     if not client:
         raise RuntimeError("Firefly client is not initialized.")
     return client
+
+
+async def get_scheduler() -> Scheduler:
+    """Get the scheduler from the application state."""
+    scheduler = app.state.scheduler
+    if not scheduler:
+        raise RuntimeError("Scheduler is not initialized.")
+    return scheduler
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -346,6 +370,27 @@ async def reset_configuration(request: Request):
     """Reset the configuration."""
     config.reset()
     _LOGGER.info("Configuration reset successfully.")
+    return RedirectResponse(str(request.url_for("index")), status_code=302)
+
+
+@app.post("/set-schedule")
+async def set_schedule(
+    request: Request,
+    schedule: str = Form(...),
+    scheduler: Scheduler = Depends(get_scheduler),
+) -> RedirectResponse:
+    """Set the import schedule."""
+    _LOGGER.info("Setting schedule to %s", schedule)
+    config.set("import_schedule", schedule)
+
+    try:
+        scheduler.set_schedule(schedule)
+    except Exception as e:
+        _LOGGER.error("Error setting schedule: %s", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Error setting schedule", "details": str(e)},
+        )
     return RedirectResponse(str(request.url_for("index")), status_code=302)
 
 
