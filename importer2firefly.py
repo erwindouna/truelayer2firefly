@@ -179,7 +179,7 @@ class Import2Firefly:
                                 if linked_account is None
                                 and transaction_type == "deposit"
                                 else (
-                                    "(unknown destination account)"
+                                    "(unknown expense account)"
                                     if linked_account is None
                                     else linked_account["attributes"]["name"]
                                 )
