@@ -17,9 +17,13 @@ from yarl import URL
 import logging
 from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+
 
 from clients.firefly import FireflyClient
 from clients.truelayer import TrueLayerClient
+from scheduler import Scheduler
 from config import Config
 from exception_handlers import (
     truelayer_authorization_error_handler,
@@ -63,6 +67,14 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     )
     _LOGGER.info("Firefly client initialized")
 
+    application.state.scheduler = Scheduler()
+    _LOGGER.info("Scheduler initialized")
+
+    application.state.scheduler.start(
+        application.state.truelayer_client, application.state.firefly_client
+    )
+    _LOGGER.info("Scheduling started")
+
     yield
 
     if client := application.state.truelayer_client:
@@ -72,6 +84,10 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     if client := application.state.firefly_client:
         await client.close()
         _LOGGER.info("Firefly client closed")
+
+    if scheduler := application.state.scheduler:
+        scheduler.stop()
+        _LOGGER.info("Scheduler stopped")
 
     _LOGGER.info("Application shutdown complete")
 
