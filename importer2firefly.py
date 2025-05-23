@@ -103,6 +103,7 @@ class Import2Firefly:
             total_transactions = len(txns)
             for i, txn in enumerate(txns, start=1):
                 cp_iban = txn.get("meta", {}).get("counter_party_iban")
+                cp_name = txn.get("meta", {}).get("counter_party_preferred_name")
                 transaction_type = (
                     "debit" if txn["transaction_type"].lower() == "debit" else "credit"
                 )
@@ -121,14 +122,29 @@ class Import2Firefly:
                         ):
                             continue
 
+                        # Check if the IBAN matches
                         if cp_iban == firefly_account["attributes"].get("iban"):
                             yield f"Matching account found via IBAN: {txn['description']} - {cp_iban}"
                             linked_account = firefly_account
                             matching += 1
                             break
 
+                        # Check if the name matches, as a final fallback
+                        # This is not prefered, but can be used if the IBAN is not available or when the  account uses multiple IBANs
+                        # Firefly doesn't allow to create multiple accounts with the same name, so this should be safe
+                        if cp_name is not None and cp_name == firefly_account[
+                            "attributes"
+                        ].get("name"):
+                            yield f"Matching account found via name: {txn['description']} - {cp_name}"
+                            linked_account = firefly_account
+                            matching += 1
+                            break
+
                     if linked_account is None:
-                        yield f"No match, still a valid IBAN. Creating a new account: {txn} - {cp_iban}"
+                        account_type = (
+                            "revenue" if transaction_type == "credit" else "Expense"
+                        )
+                        yield f"No match, still a valid IBAN. Creating a new account: {txn} - {cp_iban} - {account_type}"
                         response = await self._firefly_client.create_account(
                             {
                                 "name": txn.get("meta", {}).get(
@@ -151,7 +167,6 @@ class Import2Firefly:
                         newly_created += 1
                 else:
                     unmatching += 1
-                    # TODO: find the unknown destination account
                     yield f"Transaction has no IBAN: {txn['description']}"
 
                 # Ensure the amount is always positive

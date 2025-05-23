@@ -25,13 +25,13 @@ class Scheduler:
         """Initialize the Scheduler class."""
         self._config: Config = Config()
         self._scheduler: AsyncIOScheduler = AsyncIOScheduler()
-        self._import_job = None
+        self._import_job: AsyncIOScheduler = None
         self._schedule: str | None = schedule or self._config.get("import_schedule")
 
     def start(self) -> None:
         """Start the scheduler."""
         _LOGGER.info("Starting the scheduler, with schedule: %s", self._schedule)
-        if self._schedule is None:
+        if self._schedule is None or self._schedule == "":
             _LOGGER.warning("No schedule set, not starting the scheduler")
             return
 
