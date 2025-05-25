@@ -144,6 +144,7 @@ class Import2Firefly:
                         account_type = (
                             "revenue" if transaction_type == "credit" else "Expense"
                         )
+
                         yield f"No match, still a valid IBAN. Creating a new account: {txn} - {cp_iban} - {account_type}"
                         response = await self._firefly_client.create_account(
                             {
@@ -159,12 +160,19 @@ class Import2Firefly:
                                 ),
                             }
                         )
+
                         if response.status_code != 200:
                             yield f"Error creating account in Firefly: {response.text}"
                             continue
                         yield f"New account created: {txn.get('meta', {}).get('counter_party_preferred_name')} - {cp_iban}"
                         linked_account = response.json()["data"]
                         newly_created += 1
+
+                        yield "Firefly: Enforcing refresh accounts from Firefly"
+                        firefly_accounts = (
+                            await self._firefly_client.get_account_paginated()
+                        )
+                        yield f"Firefly: A total of {len(firefly_accounts)} account(s) found"
                 else:
                     unmatching += 1
                     yield f"Transaction has no IBAN: {txn['description']}"
