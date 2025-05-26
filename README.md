@@ -18,9 +18,14 @@ Ultrafast and lightweight application to synchornize your TrueLayer transactions
 
 
 This is an asynchronous Python application to synchronize your transactions to [Firefly III](https://firefly-iii.org/), via the [TrueLayer](https://www.truelayer.com/) financial services platform.
-It offers a user-friendly interface for managing the process and configuration. Its design is to be minimal and efficient.
+It offers a user-friendly interface for managing the process and configuration. Its design is to be minimal and efficient.]
 
 ![Promo](images/promo.png)
+
+## Documentation\
+<p align="center">
+  <a href="https://erwindouna.github.io/truelayer2firefly/"><strong>TrueLayer2Firefly documentation</strong></a>
+</p>
 
 ## Installation
 
