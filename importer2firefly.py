@@ -142,7 +142,7 @@ class Import2Firefly:
 
                     if linked_account is None:
                         account_type = (
-                            "revenue" if transaction_type == "credit" else "Expense"
+                            "revenue" if transaction_type == "credit" else "expense"
                         )
 
                         yield f"No match, still a valid IBAN. Creating a new account: {txn} - {cp_iban} - {account_type}"
@@ -183,7 +183,6 @@ class Import2Firefly:
                     "error_if_duplicate_hash": True,
                     "apply_rules": True,
                     "fire_webhooks": True,
-                    "group_title": "Split transaction title.",
                     "transactions": [
                         {
                             "description": txn["description"],
@@ -194,21 +193,35 @@ class Import2Firefly:
                                 if transaction_type == "credit"
                                 else "withdrawal"
                             ),
+                            # SWAP for deposit: asset account is destination, revenue account is source
                             "destination_id": (
-                                None if linked_account is None else linked_account["id"]
+                                import_account["id"]
+                                if transaction_type == "credit"
+                                else (
+                                    None
+                                    if linked_account is None
+                                    else linked_account["id"]
+                                )
                             ),
                             "destination_name": (
-                                "(unknown revenue account)"
-                                if linked_account is None
-                                and transaction_type == "credit"
+                                import_account["attributes"]["name"]
+                                if transaction_type == "credit"
                                 else (
                                     "(unknown expense account)"
                                     if linked_account is None
                                     else linked_account["attributes"]["name"]
                                 )
                             ),
-                            "source_id": import_account["id"],
-                            "source_name": import_account["attributes"]["name"],
+                            "source_id": (
+                                linked_account["id"]
+                                if transaction_type == "credit"
+                                else import_account["id"]
+                            ),
+                            "source_name": (
+                                linked_account["attributes"]["name"]
+                                if transaction_type == "credit"
+                                else import_account["attributes"]["name"]
+                            ),
                             "account_id": import_account["id"],
                             "linked_account_id": txn["transaction_id"],
                         }
@@ -220,6 +233,7 @@ class Import2Firefly:
                     )
                 except Exception as e:
                     yield f"Error creating transaction in Firefly: {e}"
+
                 if response.status_code == 200:
                     yield f"Transaction created: {txn['description']} - {txn['amount']} - {txn['timestamp']}"
                 elif response.status_code == 442:
