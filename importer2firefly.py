@@ -190,7 +190,7 @@ class Import2Firefly:
                             "date": txn["timestamp"],
                             "amount": amount,
                             "type": (
-                                "deposit"
+                                "revenue"
                                 if transaction_type == "credit"
                                 else "withdrawal"
                             ),
