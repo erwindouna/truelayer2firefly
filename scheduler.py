@@ -4,13 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 import logging
-from typing import Any
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import asyncio
 
-from clients.firefly import FireflyClient
-from clients.truelayer import TrueLayerClient
 from importer2firefly import Import2Firefly
 
 from config import Config

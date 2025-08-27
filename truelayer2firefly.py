@@ -17,8 +17,6 @@ from yarl import URL
 import logging
 from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 
 from clients.firefly import FireflyClient
