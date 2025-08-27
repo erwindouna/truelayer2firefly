@@ -1,3 +1,4 @@
+---
 site_name: TrueLayer2Firefly
 site_url: https://erwindouna.github.io/truelayer2firefly/
 repo_url: https://github.com/erwindouna/truelayer2firefly
@@ -20,7 +21,7 @@ theme:
     - navigation.search.highlight
     - navigation.search.suggest
     - navigation.search.share
-    - 
+    -
 markdown_extensions:
   - admonition
   - pymdownx.details
@@ -32,7 +33,7 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
 
-extra: 
+extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/erwindouna

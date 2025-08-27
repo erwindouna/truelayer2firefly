@@ -1,3 +1,4 @@
+---
 name: mkdocs-publish
 on:
   push:
