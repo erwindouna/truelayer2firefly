@@ -130,7 +130,7 @@ class Import2Firefly:
                             break
 
                         # Check if the name matches, as a final fallback
-                        # This is not prefered, but can be used if the IBAN is not available or when the  account uses multiple IBANs
+                        # This is not preferred, but can be used if the IBAN is not available or when the  account uses multiple IBANs
                         # Firefly doesn't allow to create multiple accounts with the same name, so this should be safe
                         if cp_name is not None and cp_name == firefly_account[
                             "attributes"
