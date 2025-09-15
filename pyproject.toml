@@ -14,7 +14,7 @@ fastapi = "^0.116.1"
 uvicorn = { extras = ["standard"], version = "^0.35.0" }
 httpx = "^0.28.1"
 python-dotenv = "^1.1.1"
-pydantic = "^2.11.7"
+pydantic = "^2.11.9"
 yarl = "^1.20.1"
 requests = "^2.32.5"
 aiohttp = "^3.12.15"
