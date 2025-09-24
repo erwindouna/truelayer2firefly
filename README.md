@@ -22,7 +22,7 @@ It offers a user-friendly interface for managing the process and configuration. 
 
 ![Promo](images/promo.png)
 
-## Documentation\
+## Documentation
 <p align="center">
   <a href="https://erwindouna.github.io/truelayer2firefly/"><strong>TrueLayer2Firefly documentation</strong></a>
 </p>
