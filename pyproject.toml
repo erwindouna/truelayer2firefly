@@ -25,7 +25,7 @@ python-multipart = "^0.0.20"
 itsdangerous = "^2.2.0"
 pyjwt = "^2.10.1"
 mkdocs-material = "^9.6.22"
-apscheduler = "^3.11.0"
+apscheduler = "^3.11.1"
 
 [tool.poetry.group.dev.dependencies]
 aresponses = "3.0.0"
