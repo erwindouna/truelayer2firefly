@@ -213,12 +213,20 @@ class Import2Firefly:
                                 )
                             ),
                             "source_id": (
-                                linked_account["id"]
+                                (
+                                    None
+                                    if linked_account is None
+                                    else linked_account["id"]
+                                )
                                 if transaction_type == "credit"
                                 else import_account["id"]
                             ),
                             "source_name": (
-                                linked_account["attributes"]["name"]
+                                (
+                                    "(unknown revenue account)"
+                                    if linked_account is None
+                                    else linked_account["attributes"]["name"]
+                                )
                                 if transaction_type == "credit"
                                 else import_account["attributes"]["name"]
                             ),
