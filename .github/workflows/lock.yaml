@@ -16,7 +16,7 @@
           pull-requests: write
         steps:
           - name: 🔒 Lock closed issues and PRs
-            uses: klaasnicolaas/action-inactivity-lock@v2.0.0
+            uses: klaasnicolaas/action-inactivity-lock@v2.0.1
             with:
               days-inactive-issues: 30
               lock-reason-issues: ""
