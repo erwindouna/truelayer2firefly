@@ -1443,14 +1443,14 @@ pyyaml = ">=5.1"
 
 [[package]]
 name = "mkdocs-material"
-version = "9.7.3"
+version = "9.7.5"
 description = "Documentation that simply works"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "mkdocs_material-9.7.3-py3-none-any.whl", hash = "sha256:37ebf7b4788c992203faf2e71900be3c197c70a4be9b0d72aed537b08a91dd9d"},
-    {file = "mkdocs_material-9.7.3.tar.gz", hash = "sha256:e5f0a18319699da7e78c35e4a8df7e93537a888660f61a86bd773a7134798f22"},
+    {file = "mkdocs_material-9.7.5-py3-none-any.whl", hash = "sha256:7cf9df2ff121fd098ff6e05c732b0be3699afca9642e2dfe4926c40eb5873eec"},
+    {file = "mkdocs_material-9.7.5.tar.gz", hash = "sha256:f76bdab532bad1d9c57ca7187b37eccf64dd12e1586909307f8856db3be384ea"},
 ]
 
 [package.dependencies]
@@ -1459,7 +1459,7 @@ backrefs = ">=5.7.post1"
 colorama = ">=0.4"
 jinja2 = ">=3.1"
 markdown = ">=3.2"
-mkdocs = ">=1.6"
+mkdocs = ">=1.6,<2"
 mkdocs-material-extensions = ">=1.3"
 paginate = ">=0.5"
 pygments = ">=2.16"
@@ -3152,4 +3152,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "129894ece7688fd0b2e12fc81a1464aaef64f11b0e8945cc498e65a3c229a428"
+content-hash = "5f317f774a345c86e3005846b0504a63dd8e11229c78a70b58028616052418bd"
