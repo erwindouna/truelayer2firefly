@@ -11,6 +11,7 @@ from typing import Any
 from clients.firefly import FireflyClient
 from clients.truelayer import TrueLayerClient
 from config import Config
+from exceptions import TrueLayer2FireflyConnectionError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,42 +31,64 @@ class Import2Firefly:
     async def start_import(self) -> AsyncGenerator[Any, Any]:
         """Start the import process."""
 
-        yield "TrueLayer: Fetching accounts from TrueLayer"
-        response = await self._truelayer_client.get_accounts()
+        yield "TrueLayer: Fetching accounts and cards from TrueLayer"
+        try:
+            truelayer_sources = await self._truelayer_client.get_accounts_and_cards()
+        except TrueLayer2FireflyConnectionError as err:
+            yield f"Error fetching accounts/cards from TrueLayer: {err}"
+            return
+
         await asyncio.sleep(0)
 
-        if response.status_code != 200:
-            yield f"Error fetching accounts from TrueLayer: {response.text}"
+        if not truelayer_sources:
+            yield "No accounts or cards found in TrueLayer"
             return
 
-        truelayer_accounts = response.json()
-        if "results" not in truelayer_accounts:
-            yield "No accounts found in TrueLayer"
-            return
-
-        truelayer_accounts = truelayer_accounts["results"]
-        for account in truelayer_accounts:
-            yield f"TrueLayer account: {account['account_id']} - {account['account_number'].get('iban')}"
+        for source in truelayer_sources:
+            source_kind = source["kind"]
+            if source_kind == "card":
+                source_label = source.get("display_name", source["account_id"])
+            else:
+                source_label = source["account_number"].get("iban") or source["account_id"]
+            yield f"TrueLayer {source_kind}: {source['account_id']} - {source_label}"
             await asyncio.sleep(0)
 
-        yield f"TrueLayer: A total of {len(truelayer_accounts)} account(s) found"
+        yield f"TrueLayer: A total of {len(truelayer_sources)} source(s) found"
         await asyncio.sleep(0)
 
         yield "Firefly: Fetching accounts from Firefly"
         firefly_accounts = await self._firefly_client.get_account_paginated()
         yield f"Firefly: A total of {len(firefly_accounts)} account(s) found"
 
-        yield "Matching account(s) between TrueLayer and Firefly"
+        yield "Matching source(s) between TrueLayer and Firefly"
 
-        for truelayer_account in truelayer_accounts:
+        for truelayer_source in truelayer_sources:
             import_account: dict[str, Any] = {}
-            tr_iban = truelayer_account["account_number"].get("iban")
-            yield f"Checking matches for TrueLayer account {tr_iban}"
+            source_kind = truelayer_source["kind"]
+
+            if source_kind == "card":
+                tr_label = truelayer_source.get(
+                    "display_name", truelayer_source["account_id"]
+                )
+                tr_iban = None
+            else:
+                tr_iban = truelayer_source["account_number"].get("iban")
+                tr_label = tr_iban
+
+            yield f"Checking matches for TrueLayer {source_kind}: {tr_label}"
 
             for firefly_account in firefly_accounts:
-                ff_iban = firefly_account["attributes"].get("iban")
-                if tr_iban == ff_iban:
-                    yield f"Matching account found: {tr_iban}"
+                if source_kind == "card":
+                    # Match cards by display_name against Firefly account name
+                    ff_name = firefly_account["attributes"].get("name", "")
+                    matched = bool(tr_label and tr_label == ff_name)
+                else:
+                    # Match accounts by IBAN (existing behaviour)
+                    ff_iban = firefly_account["attributes"].get("iban")
+                    matched = tr_iban == ff_iban
+
+                if matched:
+                    yield f"Matching account found: {tr_label}"
                     if (
                         firefly_account["attributes"].get("account_role")
                         == "defaultAsset"
@@ -76,13 +99,18 @@ class Import2Firefly:
                     else:
                         yield "Firefly account matched, but is not a default asset"
             else:
-                yield f"No matching Firefly account found for IBAN {tr_iban}"
+                yield f"No matching Firefly account found for {tr_label}"
                 continue
 
-            yield f"TrueLayer: Fetching transactions for {tr_iban}..."
-            transactions = await self._truelayer_client.get_transactions(
-                truelayer_account["account_id"]
-            )
+            yield f"TrueLayer: Fetching transactions for {tr_label}..."
+            if source_kind == "card":
+                transactions = await self._truelayer_client.get_card_transactions(
+                    truelayer_source["account_id"]
+                )
+            else:
+                transactions = await self._truelayer_client.get_transactions(
+                    truelayer_source["account_id"]
+                )
 
             if transactions.status_code != 200:
                 yield f"Error fetching transactions from TrueLayer: {transactions.text}"
@@ -130,7 +158,7 @@ class Import2Firefly:
                             break
 
                         # Check if the name matches, as a final fallback
-                        # This is not prefered, but can be used if the IBAN is not available or when the  account uses multiple IBANs
+                        # This is not preferred, but can be used if the IBAN is not available or when the  account uses multiple IBANs
                         # Firefly doesn't allow to create multiple accounts with the same name, so this should be safe
                         if cp_name is not None and cp_name == firefly_account[
                             "attributes"
@@ -253,7 +281,7 @@ class Import2Firefly:
                 yield {
                     "type": "progress",
                     "data": {
-                        "account": tr_iban,
+                        "account": tr_label,
                         "current": i,
                         "total": total_transactions,
                     },
@@ -262,3 +290,4 @@ class Import2Firefly:
 
             yield f"Report: {matching} matching and {unmatching} unmatching and {newly_created} newly created accounts(s)"
             await asyncio.sleep(0)
+
