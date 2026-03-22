@@ -320,21 +320,47 @@ async def truelayer_healthcheck(
             content={"error": "TrueLayer API access token is not set"},
         )
 
-    response = await truelayer.get_accounts()
-    if response.status_code != 200:
+    accounts_ok = False
+    cards_ok = False
+    accounts_status: int | None = None
+    cards_status: int | None = None
+
+    try:
+        response = await truelayer.get_accounts()
+        accounts_ok = response.status_code == 200
+        accounts_status = response.status_code
+        _LOGGER.info("TrueLayer /accounts status: %s", accounts_status)
+    except Exception as err:
+        _LOGGER.warning("TrueLayer /accounts check failed: %s", err)
+
+    try:
+        response = await truelayer.get_cards()
+        cards_ok = response.status_code == 200
+        cards_status = response.status_code
+        _LOGGER.info("TrueLayer /cards status: %s", cards_status)
+    except Exception as err:
+        _LOGGER.warning("TrueLayer /cards check failed: %s", err)
+
+    if not accounts_ok and not cards_ok:
         _LOGGER.error(
-            "TrueLayer API health check failed with status code %s",
-            response.status_code,
+            "TrueLayer API health check failed: /accounts=%s, /cards=%s",
+            accounts_status,
+            cards_status,
         )
         return JSONResponse(
             status_code=503,
             content={
                 "error": "TrueLayer API is not healthy",
-                "status_code": response.status_code,
+                "accounts_status": accounts_status,
+                "cards_status": cards_status,
             },
         )
 
-    return {"status": "OK"}
+    return {
+        "status": "OK",
+        "accounts_available": accounts_ok,
+        "cards_available": cards_ok,
+    }
 
 
 @app.get("/import/stream")
