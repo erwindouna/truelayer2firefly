@@ -37,6 +37,7 @@ from exceptions import (
     TrueLayer2FireflyTimeoutError,
 )
 from importer2firefly import Import2Firefly
+from truelayer_connections import get_truelayer_connections, upsert_active_truelayer_connection
 
 logging.basicConfig(
     level=logging.INFO,
@@ -282,7 +283,9 @@ async def get_access_token(
 ):
     """Get the access token from TrueLayer."""
     await truelayer.exchange_authorization_code()
+    connections = upsert_active_truelayer_connection(config)
     _LOGGER.info("Access token successfully retrieved.")
+    _LOGGER.info("TrueLayer connections configured: %d", len(connections))
 
     return RedirectResponse(
         str(request.url_for("index")),
@@ -311,7 +314,7 @@ async def truelayer_healthcheck(
     truelayer: TrueLayerClient = Depends(get_truelayer_client),
 ):
     """Check the health of the TrueLayer API."""
-    if not truelayer.access_token:
+    if not truelayer.access_token and not get_truelayer_connections(config):
         _LOGGER.warning("TrueLayer access token is not set")
         return JSONResponse(
             status_code=503,

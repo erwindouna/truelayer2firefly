@@ -118,6 +118,10 @@
                     <p>The redirect URI needs to be configured within TrueLayer. Goto <strong>Apps</strong> ->
                         <strong>Settings</strong> to configure your redirect URI.
                     </p>
+                    <p>
+                        To add multiple banks/cards, run this TrueLayer authorization flow again and connect another
+                        institution. Each successful authorization is stored as an additional import connection.
+                    </p>
                     <p>The TrueLayer callback URL for this installation is:</p>
                     <code>{{ request.base_url }}truelayer/callback</code>
                     <br /><br />

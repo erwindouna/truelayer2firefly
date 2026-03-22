@@ -42,7 +42,9 @@ Follow these steps to set up your TrueLayer instance. This is a bit more complic
 3. In the `Redirect URI` field, fill in the URL of your TrueLayer2Firefly instance. For example, if you are running the application on `localhost` and port `3000`, the redirect URL would be `http://localhost:3000/auth/truelayer/callback`. This needs to **100%** match the URL you are using to access the application.
 4. In TrueLayer2Firefly, fill in the `Client ID`,`Client Secret`, `Redirect URI` with the values from the TrueLayer dashboard. Again, this needs to **100%** match the URL you are using to access the application. You will now be guided through the OAuth flow to authorize the application to access your TrueLayer instance. You can filter per country and then find the banking institutions you want to connect to.
 5. From here, follow the instructions in the application to connect your bank accounts.
-6. On completion, you will be redirected to the application and your bank accounts will be connected. You can now start synchronizing your transactions!
+6. On completion, you will be redirected to the application and your bank accounts will be connected.
+7. To connect additional banks or card providers, repeat the TrueLayer authorization flow. Each completed authorization is stored and included in every import run.
+8. You can now start synchronizing your transactions from all connected TrueLayer institutions.
 
 ## Troubleshooting
 If you run into issues, you can reset your configuration by deleting the `config.json` file in the `data` folder. This will reset all your settings and you will have to reconfigure the application. Or, the more userfriendly way, goto `Configuration` and click on `Reset Configuration`. This will reset all your settings and you will have to reconfigure the application.
